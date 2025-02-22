@@ -18,7 +18,9 @@ El frontend está construido con Streamlit, una biblioteca de Python que permite
 - **Diario Emocional:** Un diario donde los usuarios pueden registrar sus emociones y pensamientos.
 - **Perfil de Personalidad:** Un análisis basado en las emociones registradas en el diario.
 - **Objetivos Personales:** Sugerencias de objetivos basados en las entradas del diario.
-- **Personas similares:** Muestra personas que puedan tener un eneagrama similar al tuyo 
+- **Personas similares:** Muestra personas que puedan tener un eneagrama similar al tuyo
+
+Además contamos con que Streamlit tiene "Streamlit Commity Coud", donde puedes enlazar un repositorio de github y ejecuar el frontend en la nube de forma sencilla
 
 ### Backend (FastAPI)
 
@@ -30,7 +32,10 @@ El backend está desarrollado con FastAPI, un framework moderno y rápido para c
 - **Profiling:** Análisis de emociones y generación de perfiles de personalidad.
 - **Objetivos:** Generación de objetivos basados en las entradas del diario.
 
-## Instalación y Ejecución
+El backend tambien lo ejecutamos en la nube gracias al servicio de "Render", que es gratis, aunque no es muy eficiente ni estable.
+## Uso
+
+## Instalación y Ejecución en Local
 
 ### Requisitos
 
@@ -60,32 +65,26 @@ Configura la base de datos:
 2. Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
 
 ```env
-DB_HOST=localhost
-DB_USER=tu_usuario
-DB_PASSWORD=tu_contraseña
-DB_NAME=llm_emociones
-MISTRAL_API_KEY=tu_api_key_de_mistral
-```
+MISTRAL_API_KEY="XJdqntbMS52MYcWrfifGJzxMWZgWlRgg"
+DB_HOST="mysql-sergiogonzalezrodriguez.alwaysdata.net"
+DB_NAME="sergiogonzalezrodriguez_users"
+DB_USER="400882_1"
+DB_PASSWORD="Hackaton2025"
 
-3. Ejecuta el script para crear las tablas en la base de datos:
-
-```bash
-python access_bd.py
-```
-
-Inicia el servidor FastAPI:
-
-```bash
-uvicorn main:app --reload
-```
-
-Inicia la aplicación Streamlit:
-
-```bash
-streamlit run app.py
 ```
 
 ## Uso de la Aplicación
+
+### Encender en local:
+Para lanzar el main.py: uvicorn main:app --reload
+
+Para lanzar el app.py: streamlit run app.py
+
+Entrar al localhost del app.py para probar el chatbot
+
+### Usar online
+
+Entrar al siguiente enlace: https://emotionai777.streamlit.app/
 
 ### Registro e Inicio de Sesión
 
