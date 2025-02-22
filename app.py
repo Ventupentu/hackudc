@@ -232,7 +232,7 @@ else:
         # Organizar las entradas por fecha (clave: "YYYY-MM-DD")
         diary_by_date = {}
         for entry in diary_entries:
-            day = entry["timestamp"][:10]
+            day = entry["date"][:10]
             diary_by_date.setdefault(day, []).append(entry)
         
         st.subheader("Selecciona la fecha")
@@ -249,7 +249,7 @@ else:
                 st.markdown(
                     f"""
                     <div class="diary-entry">
-                        <div class="diary-text">{entry['texto']}</div>
+                        <div class="diary-text">{entry["text"]}</div>
                     </div>
                     """, unsafe_allow_html=True
                 )
@@ -260,15 +260,15 @@ else:
         st.markdown("<div class='diary-container'>", unsafe_allow_html=True)
         current_entry = ""
         if selected_date_str in diary_by_date:
-            current_entry = diary_by_date[selected_date_str][0]["texto"]
+            current_entry = diary_by_date[selected_date_str][0]["text"]
         
-        diary_text = st.text_area("Crear o editar la entrada", value=current_entry, height=150)
+        diary_text = st.text_area("Crear o editar la entrada", value="", height=150)
         
         if st.button("Actualizar entrada", key="update_diary", help="Guarda o actualiza tu entrada en el diario"):
             payload = {
                 "username": st.session_state.username,
                 "password": st.session_state.password,
-                "texto": diary_text,
+                "text": diary_text,
                 "fecha": selected_date_str
             }
             response = requests.post("http://localhost:8000/diario", json=payload)

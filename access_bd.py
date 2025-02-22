@@ -22,7 +22,7 @@ class AccessBD:
         for entry in entries:
             json_entry = {
                 "date": entry[0].strftime("%Y-%m-%d"),
-                "entry": entry[1],
+                "text": entry[1],
                 "emotions": {
                     "Happy": entry[2],
                     "Angry": entry[3],
@@ -82,15 +82,16 @@ class AccessBD:
         # Crear la tabla 'diary_entries' si no existe
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS diary_entries (
-            id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT,
             date DATE,
             entry TEXT,
-            happy TINYINT(1),
-            angry TINYINT(1),
-            surprise TINYINT(1),
-            sad TINYINT(1),
-            fear TINYINT(1),
+            happy DECIMAL(3,2),
+            angry DECIMAL(3,2),
+            surprise DECIMAL(3,2),
+            sad DECIMAL(3,2),
+            fear DECIMAL(3,2),
+            UNIQUE (user_id, date),
+            PRIMARY KEY (user_id, date),
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
         """)
@@ -102,11 +103,11 @@ class AccessBD:
             date DATETIME,
             human_message TEXT,
             bot_message TEXT,
-            happy TINYINT(1),
-            angry TINYINT(1),
-            surprise TINYINT(1),
-            sad TINYINT(1),
-            fear TINYINT(1),
+            happy DECIMAL(3,2),
+            angry DECIMAL(3,2),
+            surprise DECIMAL(3,2),
+            sad DECIMAL(3,2),
+            fear DECIMAL(3,2),
             FOREIGN KEY (user_id) REFERENCES users(id)
         )
         """)
@@ -174,6 +175,13 @@ class AccessBD:
         cursor.execute("""
         INSERT INTO diary_entries (user_id, date, entry, happy, angry, surprise, sad, fear)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE 
+        entry = VALUES(entry), 
+        happy = VALUES(happy),
+        angry = VALUES(angry),
+        surprise = VALUES(surprise),
+        sad = VALUES(sad),
+        fear = VALUES(fear)
         """, (user_id, diary_entry['date'], 
               diary_entry['text'], 
               diary_entry['emotions']['Happy'], 
@@ -224,6 +232,34 @@ class AccessBD:
         entries = cursor.fetchall()
         cursor.close()
         return self.list_to_entris_json(entries)
+    
+    def get_diary_entry(self, user: str, date: str) -> dict:
+        """
+        Obtener una entrada del diario de un usuario
+        :param user: Nombre de usuario  
+        :param date: Fecha de la entrada
+        """
+        cursor = self.connection.cursor()
+
+        # Obtener el id del usuario
+        cursor.execute("SELECT id FROM users WHERE username = %s", (user,))
+        result = cursor.fetchone()
+        if result:
+            user_id = result[0]
+        else:
+            return {}
+        
+        cursor.execute("""
+                       SELECT date, entry, happy, angry, surprise, sad, fear
+                       FROM diary_entries
+                       WHERE user_id = %s AND date = %s
+                       """, (user_id, date))
+        entry = cursor.fetchone()
+        cursor.close()
+        if entry:
+            return self.list_to_entris_json([entry])[0]
+        else:
+            return None
 
     def insert_chat_history(self, user: str, chat_history: dict):
         cursor = self.connection.cursor()
@@ -292,13 +328,20 @@ class AccessBD:
     def close(self):
         self.connection.close()
 
+    def drop_table(self):
+        cursor = self.connection.cursor()
+        cursor.execute("DROP TABLE diary_entries")
+        
+        self.connection.commit()
+        cursor.close()
+
 if __name__ == '__main__':
     access_bd = AccessBD()
     access_bd.create_tables()
-    """
+    
     access_bd.insert_diary_entry("user1", {
         "date": "2021-09-03",
-        "entry": "Hoy fue un día muy xD",
+        "text": "Hoy fue un día muy xD aaa",
         "emotions": {
             "Happy": 0,
             "Angry": 0,
@@ -307,11 +350,12 @@ if __name__ == '__main__':
             "Fear": 0
         }
     })
-    """
+    
 
     entries = access_bd.get_diary_entries("user1", 2)
     print(entries)
     print(access_bd.verify_user("Adan", "Putero"))
     print(access_bd.get_diary_entries("Adan"))
+    print(access_bd.get_diary_entry("Adan", "2025-02-22"))
     access_bd.close()
     
