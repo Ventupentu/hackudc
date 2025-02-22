@@ -106,18 +106,7 @@ if "diary_text" not in st.session_state:
 if "edit_mode" not in st.session_state:
     st.session_state.edit_mode = False
 
-import os
-
-# Cargar el archivo .env manualmente
-with open(".env") as f:
-    for line in f:
-        key, value = line.strip().split("=", 1)
-        os.environ[key] = value  # Guardar en variables de entorno
-
-# Obtener el valor de URL
-url = os.getenv("URL")
-
-URL = url
+URL = "https://hackudc.onrender.com"
 
 def send_message():
     user_input = st.session_state.get("user_input", "")
