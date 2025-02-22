@@ -103,8 +103,6 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
-URL="https://hackudc.onrender.com"
-
 # Inicializar variables de sesión
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -120,7 +118,7 @@ def send_message():
     if user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
         payload = {"messages": st.session_state.messages}
-        response = requests.post(f"{URL}/chat", json=payload)
+        response = requests.post("http://localhost:8000/chat", json=payload)
         if response.ok:
             data = response.json()
             assistant_response = data.get("respuesta", "No se obtuvo respuesta.")
@@ -141,7 +139,7 @@ if not st.session_state.logged_in:
             password = st.text_input("Contraseña", type="password", placeholder="Escribe tu contraseña")
             submitted = st.form_submit_button("Iniciar Sesión")
             if submitted:
-                response = requests.post(f"{URL}/login", json={"username": username, "password": password})
+                response = requests.post("http://localhost:8000/login", json={"username": username, "password": password})
                 if response.ok:
                     st.success("¡Login exitoso!")
                     st.session_state.logged_in = True
@@ -156,7 +154,7 @@ if not st.session_state.logged_in:
             password = st.text_input("Elige una contraseña", type="password", placeholder="Contraseña deseada")
             submitted = st.form_submit_button("Registrarse")
             if submitted:
-                response = requests.post(f"{URL}/register", json={"username": username, "password": password})
+                response = requests.post("http://localhost:8000/register", json={"username": username, "password": password})
                 if response.ok:
                     st.success("Usuario registrado exitosamente. Ahora inicia sesión.")
                 else:
@@ -213,7 +211,7 @@ else:
         st.title("Diario Emocional")
         st.write(f"Usuario: **{st.session_state.username}**")
         params = {"username": st.session_state.username, "password": st.session_state.password}
-        response = requests.get(f"{URL}/diario", params=params)
+        response = requests.get("http://localhost:8000/diario", params=params)
         diary_entries = []
         if response.ok:
             data = response.json()
@@ -256,7 +254,7 @@ else:
                 "texto": diary_text,
                 "fecha": selected_date_str
             }
-            response = requests.post(f"{URL}/diario", json=payload)
+            response = requests.post("http://localhost:8000/diario", json=payload)
             if response.ok:
                 st.success("¡Entrada actualizada!")
                 st.rerun()
@@ -268,7 +266,7 @@ else:
         st.title("Perfil de Personalidad")
         # Solicitar datos del endpoint de profiling
         params = {"username": st.session_state.username, "password": st.session_state.password}
-        response = requests.get(f"{URL}/profiling", params=params)
+        response = requests.get("http://localhost:8000/profiling", params=params)
         if response.ok:
             data = response.json()
             big_five = data.get("big_five", {})
