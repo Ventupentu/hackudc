@@ -327,14 +327,14 @@ class AccessBD:
     def close(self):
         self.connection.close()
 
-    """
-    def upgrade_ngrama(self):
+
+    def create_index(self, table_name, column_name):
         cursor = self.connection.cursor()
-        cursor.execute("ALTER TABLE users ADD COLUMN ngrama INT DEFAULT 0")
-        cursor.execue("UPDATE users SET ngrama = 0")
+        cursor.execute(f"CREATE INDEX idx_{table_name}_{column_name} ON {table_name} ({column_name})")
         self.connection.commit()
         cursor.close()
-    """
+        
+    
     def drop_table(self):
         cursor = self.connection.cursor()
         cursor.execute("DROP TABLE diary_entries")
@@ -345,22 +345,17 @@ class AccessBD:
 if __name__ == '__main__':
     access_bd = AccessBD()
     access_bd.create_tables()
-    
     """
-    access_bd.insert_diary_entry("user1", {
-        "date": "2021-09-03",
-        "entry": "Hoy fue un día muy xD aaa",
-        "emotions": {
-            "Happy": 0,
-            "Angry": 0,
-            "Surprise": 0,
-            "Sad": 1,
-            "Fear": 0
-        }
-    })
-    """
-    
+    #Creamos un índice por nombre de usuario
+    access_bd.create_index("users", "username")
+    #Un índice por user_id en las tablas de entradas del diario y chat_history
+    access_bd.create_index("diary_entries", "user_id")
+    access_bd.create_index("chat_history", "user_id")
 
+    #estos indices nos permitirán hacer búsquedas más rápidas en la base de datos
+    """
+
+    #pequeña prueba de la funcionalidad de la base de datos
     print(access_bd.get_chat_history("Sergio"))
     access_bd.close()
 
