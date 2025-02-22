@@ -147,7 +147,7 @@ if not st.session_state.logged_in:
                     st.session_state.logged_in = True
                     st.session_state.username = username
                     st.session_state.password = password
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.error("Credenciales inválidas o error en el login.")
     elif auth_option == "Registrarse":
@@ -172,7 +172,7 @@ else:
         st.session_state.username = ""
         st.session_state.password = ""
         st.session_state.messages = []
-        st.experimental_rerun()
+        st.rerun()
     
     if service_option == "Chatbot":
         st.title("Chatbot Emocional - Guía Psicológica")
@@ -207,7 +207,7 @@ else:
                 submitted = st.form_submit_button("Enviar")
                 if submitted:
                     send_message()
-                    st.experimental_rerun()
+                    st.rerun()
     
     elif service_option == "Diario":
         st.title("Diario Emocional")
@@ -259,7 +259,7 @@ else:
             response = requests.post(f"{URL}/diario", json=payload)
             if response.ok:
                 st.success("¡Entrada actualizada!")
-                st.experimental_rerun()
+                st.rerun()
             else:
                 st.error("Error al actualizar la entrada.")
         st.markdown("</div>", unsafe_allow_html=True)
