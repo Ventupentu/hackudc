@@ -210,6 +210,7 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
     if not diary_entries:
         raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
     
+    from datetime import datetime
     now = datetime.now()
     weighted_emotions = {"Happy": 0.0, "Sad": 0.0, "Angry": 0.0, "Surprise": 0.0, "Fear": 0.0}
     total_weight = 0.0
@@ -222,7 +223,7 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
         days_diff = (now - ts).days
         weight = 1 / (1 + days_diff/7)
         for emo in weighted_emotions:
-            weighted_emotions[emo] += entry.get("emotions", {}).get(emo, 0) * weight
+            weighted_emotions[emo] += entry.get("emociones", {}).get(emo, 0) * weight
         total_weight += weight
     
     if total_weight == 0:
@@ -230,26 +231,32 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
     
     average_emotions = {k: v / total_weight for k, v in weighted_emotions.items()}
 
+    #Ponderación de emociones (esto puede ajustarse)
     emotion_weights = {
-        "Sad": 0.3,
-        "Fear": 0.3,
-        "Angry": 0.4,
-        "Happy": 0.3,
-        "Surprise": 0.4
+        "Sad": 0.3,   # A mayor tristeza, mayor neuroticismo
+        "Fear": 0.3,  # A mayor miedo, mayor neuroticismo
+        "Angry": 0.4, # A mayor ira, mayor neuroticismo
+        "Happy": 0.3, # Felicidad se asocia con extraversión y amabilidad
+        "Surprise": 0.4 # Sorpresa también se asocia con extraversión
     }
     
     neuroticism = (average_emotions["Sad"] * emotion_weights["Sad"] + 
-                     average_emotions["Fear"] * emotion_weights["Fear"] + 
-                     average_emotions["Angry"] * emotion_weights["Angry"]) / (emotion_weights["Sad"] + emotion_weights["Fear"] + emotion_weights["Angry"])
+                average_emotions["Fear"] * emotion_weights["Fear"] + 
+                average_emotions["Angry"] * emotion_weights["Angry"]) / (emotion_weights["Sad"] + emotion_weights["Fear"] + emotion_weights["Angry"])
 
     extraversion = (average_emotions["Happy"] * emotion_weights["Happy"] + 
                     average_emotions["Surprise"] * emotion_weights["Surprise"]) / (emotion_weights["Happy"] + emotion_weights["Surprise"])
 
-    agreeableness = (average_emotions["Happy"] * 0.5 + (1 - average_emotions["Angry"]) * 0.5)
+    agreeableness = (average_emotions["Happy"] * 0.5 + (1 - average_emotions["Angry"]) * 0.5)  # Menos ira y más felicidad da mayor amabilidad
 
-    openness = min(1.0, (average_emotions["Surprise"] + average_emotions["Happy"]) / 2)
-    conscientiousness = max(0.2, 1 - (average_emotions["Angry"] + average_emotions["Fear"]) / 2)
+    # Openness y Conscientiousness basados en el contenido del diario y emociones
+    # Si hay mucha sorpresa o emoción positiva, puede aumentar el Openness
+    openness = min(1.0, (average_emotions["Surprise"] + average_emotions["Happy"]) / 2)  # Valores entre 0 y 1
 
+    # Conscientiousness basado en la organización de las emociones (menos emociones caóticas)
+    conscientiousness = max(0.2, 1 - (average_emotions["Angry"] + average_emotions["Fear"]) / 2)  # Si las emociones son más negativas, la consciencia es baja
+
+    # Formato final del Big Five
     big_five = {
         "Neuroticism": round(neuroticism, 2),
         "Extraversion": round(extraversion, 2),
@@ -258,30 +265,56 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
         "Conscientiousness": round(conscientiousness, 2),
     }
     
+#    if average_emotions["Angry"] > 0.6:
+ #       eneagrama = "Tipo 8: El Desafiador"
+  #  elif average_emotions["Sad"] > 0.6:
+   #     eneagrama = "Tipo 4: El Individualista"
+    #elif average_emotions["Happy"] > 0.6:
+#        eneagrama = "Tipo 7: El Entusiasta"
+ #   elif average_emotions["Fear"] > 0.6:
+  #      eneagrama = "Tipo 6: El Leal"
+   # elif average_emotions["Surprise"] > 0.6:
+    #    eneagrama = "Tipo 3: El Triunfador"
+#    elif average_emotions["Angry"] < 0.2 and average_emotions["Sad"] < 0.2 and average_emotions["Fear"] < 0.2:
+ #       eneagrama = "Tipo 9: El Pacificador"
+  #  elif average_emotions["Happy"] > 0.5 and average_emotions["Sad"] < 0.4 and average_emotions["Fear"] < 0.4:
+   #     eneagrama = "Tipo 2: El Ayudador"
+    #elif average_emotions["Sad"] > 0.5 and average_emotions["Happy"] < 0.4:
+#        eneagrama = "Tipo 4: El Individualista"
+ #   elif average_emotions["Surprise"] > 0.4 and average_emotions["Angry"] < 0.3:
+  #      eneagrama = "Tipo 3: El Triunfador"
+   # else:
     def list_of_dicts_to_entries_text(entries: list) -> str:
+        """Convertir la lista de diccionarios de entradas del diario a un texto estructurado"""
         text_entries = ""
         for entry in entries:
+            # Asumimos que cada entry es un diccionario con "date", "entry", y "emotions"
             date = entry["date"]
             text = entry["entry"]
-            emotions = entry.get("emotions", {})
+            emotions = entry["emotions"]
             
             text_entries += f"Fecha: {date}\n"
             text_entries += f"Entrada: {text}\n"
-            text_entries += "Emociones:\n"
+            text_entries += f"Emociones:\n"
             for emotion, value in emotions.items():
                 text_entries += f"- {emotion}: {value}\n"
-            text_entries += "\n"
+            text_entries += "\n"  # Añadir una línea vacía entre las entradas
+        
         return text_entries
 
+    # Usar este formato legible con una lista de diccionarios
     entries_text = list_of_dicts_to_entries_text(diary_entries)
 
+    # Ahora pasar esta cadena al LLM
     eneagrama = call_mistral_rag([{
         "role": "system",
         "content": f"Determina el tipo de eneagrama basado en las siguientes emociones y textos del diario:\n{entries_text}"
     }])
 
+    # --- Generación del gráfico Radar para Big Five ---
     dimensions = list(big_five.keys())
     scores = list(big_five.values())
+    # Cerrar el polígono
     dimensions.append(dimensions[0])
     scores.append(scores[0])
     
@@ -298,6 +331,7 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
         )
     )
     
+    # --- Generación del gráfico de Barras para emociones promedio ---
     bar_fig = go.Figure(
         data=[
             go.Bar(x=list(average_emotions.keys()), y=[round(v, 2) for v in average_emotions.values()])
@@ -310,6 +344,7 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
         )
     )
     
+    # Convertir las figuras a JSON para enviarlas al cliente
     return {
         "big_five": big_five,
         "eneagrama": eneagrama,
