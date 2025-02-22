@@ -9,59 +9,75 @@ if "username" not in st.session_state:
     st.session_state.username = ""
 if "password" not in st.session_state:
     st.session_state.password = ""
+if "messages" not in st.session_state:
+    st.session_state.messages = []
 
-# Si el usuario no está autenticado, mostramos únicamente las opciones de Autenticación
+# Si el usuario NO está autenticado, mostramos la página "Home" (registro y login)
 if not st.session_state.logged_in:
-    st.sidebar.title("Autenticación")
-    auth_option = st.sidebar.radio("Selecciona una opción:", ["Iniciar Sesión", "Registrarse"])
+    st.title("Home")
+    st.write("Por favor, regístrate o inicia sesión para acceder a los servicios.")
+    
+    auth_option = st.radio("Selecciona una opción:", ["Iniciar Sesión", "Registrarse"])
     
     if auth_option == "Iniciar Sesión":
-        st.title("Iniciar Sesión")
         with st.form("login_form"):
             username = st.text_input("Usuario")
             password = st.text_input("Contraseña", type="password")
             submitted = st.form_submit_button("Iniciar Sesión")
             if submitted:
-                response = requests.post("http://localhost:8000/login", json={"username": username, "password": password})
+                response = requests.post(
+                    "http://localhost:8000/login", 
+                    json={"username": username, "password": password}
+                )
                 if response.ok:
                     st.success("Login exitoso")
                     st.session_state.logged_in = True
                     st.session_state.username = username
                     st.session_state.password = password
+                    st.rerun()
+                    
+
                 else:
                     st.error("Credenciales inválidas o error en el login.")
                     
     elif auth_option == "Registrarse":
-        st.title("Registrarse")
         with st.form("register_form"):
             username = st.text_input("Elige un usuario")
             password = st.text_input("Elige una contraseña", type="password")
             submitted = st.form_submit_button("Registrarse")
             if submitted:
-                response = requests.post("http://localhost:8000/register", json={"username": username, "password": password})
+                response = requests.post(
+                    "http://localhost:8000/register", 
+                    json={"username": username, "password": password}
+                )
                 if response.ok:
                     st.success("Usuario registrado exitosamente. Ahora inicia sesión.")
                 else:
                     st.error("Error en el registro. Puede que el usuario ya exista.")
-
-# Una vez autenticado, se muestran las demás secciones
+                    
+# Si el usuario está autenticado, se muestran los servicios en un menú lateral
 else:
-    st.sidebar.title("Menú Principal")
-    page = st.sidebar.radio("Selecciona una opción:", ["Chatbot", "Diario", "Profiling", "Objetivo"])
+    st.sidebar.title("Servicios")
+    service_option = st.sidebar.radio("Selecciona un servicio:", ["Chatbot", "Diario", "Profiling", "Objetivo"])
     
-    if page == "Chatbot":
+    # Botón para cerrar sesión
+    if st.sidebar.button("Cerrar sesión"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.session_state.password = ""
+        st.session_state.messages = []
+        st.rerun()
+
+    
+    if service_option == "Chatbot":
         st.title("Chatbot Emocional - Guía Psicológica")
         
-        # Inicializar historial de mensajes
-        if "messages" not in st.session_state:
-            st.session_state.messages = []
-            
         def send_message():
             user_input = st.session_state.user_input
             if user_input:
-                # Agregar mensaje del usuario
+                # Agregar mensaje del usuario al historial
                 st.session_state.messages.append({"role": "user", "content": user_input})
-                # Enviar todo el historial al endpoint /chat
+                # Enviar el historial completo al endpoint /chat
                 payload = {"messages": st.session_state.messages}
                 response = requests.post("http://localhost:8000/chat", json=payload)
                 if response.ok:
@@ -69,23 +85,22 @@ else:
                     assistant_response = data.get("respuesta", "No se obtuvo respuesta.")
                 else:
                     assistant_response = "Error al procesar tu mensaje."
-                # Agregar respuesta del chatbot
+                # Agregar respuesta del chatbot al historial
                 st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-                
+        
         with st.form(key="chat_form", clear_on_submit=True):
             st.text_input("Ingresa tu mensaje", key="user_input")
             submitted = st.form_submit_button("Enviar")
             if submitted:
                 send_message()
                 
-        # Mostrar historial de conversación
         for msg in st.session_state.messages:
             if msg["role"] == "user":
                 st.markdown(f"**Tú:** {msg['content']}")
             else:
                 st.markdown(f"**Chatbot:** {msg['content']}")
     
-    elif page == "Diario":
+    elif service_option == "Diario":
         st.title("Diario Emocional")
         st.write(f"Usuario: {st.session_state.username}")
         diary_text = st.text_area("Escribe sobre tu día", height=150)
@@ -111,7 +126,8 @@ else:
             else:
                 st.error("Error al obtener las entradas.")
     
-    elif page == "Profiling":
+    elif service_option == "Profiling":
         st.write("Sección de Profiling - (Por implementar)")
-    elif page == "Objetivo":
+    
+    elif service_option == "Objetivo":
         st.write("Sección de Objetivos - (Por implementar)")
