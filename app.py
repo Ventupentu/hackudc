@@ -1,9 +1,7 @@
-# archivo: app.py
 import streamlit as st
 import requests
 import datetime
 
-# Inyectar CSS personalizado para imitar la interfaz de ChatGPT y mejorar la sección del Diario
 st.markdown(
     """
     <style>
@@ -114,21 +112,10 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "diary_text" not in st.session_state:
     st.session_state.diary_text = ""
+if "edit_mode" not in st.session_state:
+    st.session_state.edit_mode = False
 
-URL = "http://localhost:8000"  # Asegúrate de que la URL concuerde con tu backend
-
-def send_message():
-    user_input = st.session_state.get("user_input", "")
-    if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        payload = {"messages": st.session_state.messages}
-        response = requests.post(f"{URL}/chat", json=payload)
-        if response.ok:
-            data = response.json()
-            assistant_response = data.get("respuesta", "No se obtuvo respuesta.")
-        else:
-            assistant_response = "Error al procesar tu mensaje."
-        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+URL = "http://localhost:8000"
 
 # Página Home (sin autenticación)
 if not st.session_state.logged_in:
@@ -163,7 +150,6 @@ if not st.session_state.logged_in:
                     st.success("Usuario registrado exitosamente. Ahora inicia sesión.")
                 else:
                     st.error("Error en el registro. Es posible que el usuario ya exista.")
-
 # Página de Servicios (usuario autenticado)
 else:
     st.sidebar.title("Menú de Servicios")
@@ -174,6 +160,7 @@ else:
         st.session_state.username = ""
         st.session_state.password = ""
         st.session_state.messages = []
+        st.session_state.edit_mode = False
         st.rerun()
     
     if service_option == "Chatbot":
@@ -203,13 +190,20 @@ else:
                         """, unsafe_allow_html=True
                     )
         input_container = st.container()
-        with input_container:
-            with st.form(key="chat_form", clear_on_submit=True):
-                st.text_input("Ingresa tu mensaje", key="user_input", placeholder="Escribe aquí tu mensaje...")
-                submitted = st.form_submit_button("Enviar")
-                if submitted:
-                    send_message()
-                    st.rerun()
+        with st.form(key="chat_form", clear_on_submit=True):
+            st.text_input("Ingresa tu mensaje", key="user_input", placeholder="Escribe aquí tu mensaje...")
+            submitted = st.form_submit_button("Enviar")
+            if submitted:
+                payload = {"messages": st.session_state.messages}
+                response = requests.post(f"{URL}/chat", json=payload)
+                if response.ok:
+                    data = response.json()
+                    assistant_response = data.get("respuesta", "No se obtuvo respuesta.")
+                else:
+                    assistant_response = "Error al procesar tu mensaje."
+                st.session_state.messages.append({"role": "user", "content": st.session_state.user_input})
+                st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+                st.rerun()
     
     elif service_option == "Diario":
         st.title("Diario Emocional")
@@ -247,15 +241,15 @@ else:
         else:
             st.info("No hay entradas para este día.")
         
-        # Botón "Editar entrada" para cargar el contenido actual en el formulario y sobreescribirlo
+        # Botón para activar el modo edición
         if entries:
             if st.button("Editar entrada", key="edit_button"):
                 st.session_state.diary_text = entries[0]["entry"]
+                st.session_state.edit_mode = True
                 st.rerun()
         
-        # Formulario para escribir o sobreescribir el diario
         with st.form(key="diary_form", clear_on_submit=True):
-            diary_input = st.text_area(
+            new_diary_input = st.text_area(
                 "Escribe tu entrada", 
                 value=st.session_state.diary_text, 
                 height=150, 
@@ -266,13 +260,16 @@ else:
                 payload = {
                     "username": st.session_state.username,
                     "password": st.session_state.password,
-                    "entry": diary_input,
-                    "fecha": selected_date_str
+                    "entry": new_diary_input,
+                    "fecha": selected_date_str,
+                    "editar": st.session_state.edit_mode
                 }
+                
                 response = requests.post(f"{URL}/diario", json=payload)
                 if response.ok:
                     st.success("¡Entrada actualizada y sobreescrita!")
                     st.session_state.diary_text = ""
+                    st.session_state.edit_mode = False
                     st.rerun()
                 else:
                     st.error("Error al actualizar la entrada.")
