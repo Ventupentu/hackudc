@@ -110,7 +110,7 @@ async def register(user: UserAuth):
     conn = get_db_connection()
     cursor = conn.cursor()
     # Verificar si el usuario ya existe
-    cursor.execute("SELECT COUNT(*) FROM user_prueba WHERE username = %s", (user.username,))
+    cursor.execute("SELECT COUNT(*) FROM users WHERE username = %s", (user.username,))
     (count,) = cursor.fetchone()
     if count > 0:
         cursor.close()
@@ -122,7 +122,7 @@ async def register(user: UserAuth):
     # Hashear la contraseña
     hashed_password = pwd_context.hash(user.password)
     cursor.execute(
-        "INSERT INTO user_prueba (username, password, date, entry) VALUES (%s, %s, %s, %s)",
+        "INSERT INTO users (username, password, date, entry) VALUES (%s, %s, %s, %s)",
         (user.username, hashed_password, current_time, empty_entry)
     )
     conn.commit()
@@ -137,7 +137,7 @@ async def register(user: UserAuth):
 async def login(user: UserAuth):
     conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("SELECT password FROM user_prueba WHERE username = %s LIMIT 1", (user.username,))
+    cursor.execute("SELECT password FROM users WHERE username = %s LIMIT 1", (user.username,))
     result = cursor.fetchone()
     cursor.close()
     conn.close()
@@ -156,7 +156,7 @@ async def agregar_diario(entry: DiaryEntry):
     conn = get_db_connection()
     cursor = conn.cursor()
     # Verificar credenciales y obtener la entrada actual del usuario
-    cursor.execute("SELECT password, entry FROM user_prueba WHERE username = %s LIMIT 1", (entry.username,))
+    cursor.execute("SELECT password, entry FROM users WHERE username = %s LIMIT 1", (entry.username,))
     result = cursor.fetchone()
     if not result:
         cursor.close()
@@ -184,7 +184,7 @@ async def agregar_diario(entry: DiaryEntry):
     diary_list.append(new_diary_entry)
     new_diary_json = json.dumps(diary_list, ensure_ascii=False)
     # Actualizar la fila del usuario con el nuevo arreglo JSON y actualizar la fecha (opcional)
-    cursor.execute("UPDATE user_prueba SET date = %s, entry = %s WHERE username = %s", (fecha, new_diary_json, entry.username))
+    cursor.execute("UPDATE users SET date = %s, entry = %s WHERE username = %s", (fecha, new_diary_json, entry.username))
     conn.commit()
     cursor.close()
     conn.close()
@@ -198,7 +198,7 @@ async def obtener_diario(username: str = Query(...), password: str = Query(...))
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     # Verificar credenciales consultando la contraseña hasheada
-    cursor.execute("SELECT password, entry FROM user_prueba WHERE username = %s LIMIT 1", (username,))
+    cursor.execute("SELECT password, entry FROM users WHERE username = %s LIMIT 1", (username,))
     result = cursor.fetchone()
     if not result or not pwd_context.verify(password, result["password"]):
         cursor.close()
@@ -222,7 +222,7 @@ async def obtener_diario(username: str = Query(...), password: str = Query(...))
 async def obtener_perfil():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT entry FROM user_prueba WHERE entry <> ''")
+    cursor.execute("SELECT entry FROM users WHERE entry <> ''")
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
