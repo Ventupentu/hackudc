@@ -221,7 +221,6 @@ else:
                     
     elif service_option == "Diario":
         st.title("Diario Emocional")
-        st.write(f"Usuario: **{st.session_state.username}**")
         params = {"username": st.session_state.username, "password": st.session_state.password}
         response = requests.get(f"{URL}/diario", params=params)
         diary_entries = []
@@ -294,7 +293,8 @@ else:
             st.markdown("### Objetivos de Mejora")
             if objetivos["objetivos"]:
                 for objetivo in objetivos["objetivos"]:
-                    st.markdown(f"- {objetivo}")
+                    st.markdown(f"<p style='font-size: 20px;'>{objetivo}</p>", unsafe_allow_html=True)
+
             else:
                 st.info("No se han generado objetivos personalizados.")
         else:
@@ -303,7 +303,6 @@ else:
     
     elif service_option == "Profiling":
         st.title("Perfil de Personalidad")
-        #st.write(f"Usuario: **{st.session_state.username}**")
         params = {"username": st.session_state.username, "password": st.session_state.password}
         response = requests.get(f"{URL}/perfilado", params=params)
 
@@ -365,14 +364,15 @@ else:
                     title="Perfil Big Five"
                 )
                 st.plotly_chart(fig_bar)
-                st.markdown(f"{perfil['tendencia']}")
+                st.markdown(f"<h2 style='font-size: 24px;'>{perfil['tendencia']}</h2>", unsafe_allow_html=True)
 
                 st.plotly_chart(fig_radar)
                                 
                 st.markdown("### Eneagrama")
-                st.markdown(f"{eneagrama['eneagrama_type']}")
-                st.markdown(f"{eneagrama['description']}")
-                st.markdown(f"{eneagrama['recommendation']}")
+                st.markdown(f"<p style='font-size: 20px;'>{eneagrama['eneagrama_type']}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='font-size: 20px;'>{eneagrama['description']}</p>", unsafe_allow_html=True)
+                st.markdown(f"<p style='font-size: 20px;'>{eneagrama['recommendation']}</p>", unsafe_allow_html=True)
+
 
                 
                 #st.write(eneagrama)

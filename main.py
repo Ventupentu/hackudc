@@ -96,11 +96,9 @@ async def chat(conversation: Conversation):
     if last_message.role == "user":
         emociones = te.get_emotion(last_message.content)
     emocion_dominante = max(emociones, key=emociones.get, default="neutral")
-    print("Emocion:", emocion_dominante)
 
     # Crear un perfil emocional simple a partir del diario
     perfil = perfilar(username)
-    print(f"Perfil emocional: {perfil}")
 
     # Crear un mensaje adicional para orientar a la IA
     mensaje_emocional = {
@@ -194,10 +192,6 @@ def perfilar(username: str) -> dict:
     except Exception as e:
         print("Error parsing JSON:", e)
         eneagrama_dict = {}
-
-    print("Eneagrama:", eneagrama_dict)
-
-
 
     return {"perfil_emocional": perfil, "tendencia": tendencia, "eneagrama": eneagrama_dict}
 
