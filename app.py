@@ -112,9 +112,10 @@ if "password" not in st.session_state:
     st.session_state.password = ""
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "diary_text" not in st.session_state:
+    st.session_state.diary_text = ""
 
-URL="https://hackudc.onrender.com"
-URL="http://localhost:8000"
+URL = "http://localhost:8000"  # Asegúrate de que la URL concuerde con tu backend
 
 def send_message():
     user_input = st.session_state.get("user_input", "")
@@ -129,7 +130,7 @@ def send_message():
             assistant_response = "Error al procesar tu mensaje."
         st.session_state.messages.append({"role": "assistant", "content": assistant_response})
 
-# Página Home: si el usuario NO está autenticado
+# Página Home (sin autenticación)
 if not st.session_state.logged_in:
     st.title("Bienvenido a Tu Espacio Emocional")
     st.write("Regístrate o inicia sesión para acceder a nuestros servicios personalizados.")
@@ -163,7 +164,7 @@ if not st.session_state.logged_in:
                 else:
                     st.error("Error en el registro. Es posible que el usuario ya exista.")
 
-# Página de Servicios: si el usuario está autenticado
+# Página de Servicios (usuario autenticado)
 else:
     st.sidebar.title("Menú de Servicios")
     service_option = st.sidebar.radio("Selecciona un servicio:", ["Chatbot", "Diario", "Profiling", "Objetivo"])
@@ -222,6 +223,7 @@ else:
         else:
             st.error("Error al obtener las entradas del diario.")
         
+        # Agrupar entradas por fecha
         diary_by_date = {}
         for entry in diary_entries:
             day = entry["date"][:10]
@@ -245,25 +247,35 @@ else:
         else:
             st.info("No hay entradas para este día.")
         
-        st.markdown("<div class='diary-container'>", unsafe_allow_html=True)
-        current_entry = ""
-        if selected_date_str in diary_by_date:
-            current_entry = diary_by_date[selected_date_str][0]["entry"]
-        diary_text = st.text_area("Crear o editar la entrada", value="", height=150)
-        if st.button("Actualizar entrada", key="update_diary", help="Guarda o actualiza tu entrada en el diario"):
-            payload = {
-                "username": st.session_state.username,
-                "password": st.session_state.password,
-                "entry": diary_text,
-                "fecha": selected_date_str
-            }
-            response = requests.post(f"{URL}/diario", json=payload)
-            if response.ok:
-                st.success("¡Entrada actualizada!")
+        # Botón "Editar entrada" para cargar el contenido actual en el formulario y sobreescribirlo
+        if entries:
+            if st.button("Editar entrada", key="edit_button"):
+                st.session_state.diary_text = entries[0]["entry"]
                 st.rerun()
-            else:
-                st.error("Error al actualizar la entrada.")
-        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # Formulario para escribir o sobreescribir el diario
+        with st.form(key="diary_form", clear_on_submit=True):
+            diary_input = st.text_area(
+                "Escribe tu entrada", 
+                value=st.session_state.diary_text, 
+                height=150, 
+                key="diary_text_input"
+            )
+            submitted = st.form_submit_button("Actualizar entrada")
+            if submitted:
+                payload = {
+                    "username": st.session_state.username,
+                    "password": st.session_state.password,
+                    "entry": diary_input,
+                    "fecha": selected_date_str
+                }
+                response = requests.post(f"{URL}/diario", json=payload)
+                if response.ok:
+                    st.success("¡Entrada actualizada y sobreescrita!")
+                    st.session_state.diary_text = ""
+                    st.rerun()
+                else:
+                    st.error("Error al actualizar la entrada.")
     
     elif service_option == "Profiling":
         st.title("Perfil de Personalidad")
@@ -279,7 +291,6 @@ else:
             for dimension, score in big_five.items():
                 st.write(f"**{dimension}:** {score}")
             
-            # Reconstruir y mostrar el gráfico Radar para Big Five
             import json
             import plotly.graph_objects as go
             radar_chart_json = data.get("radar_chart")
@@ -294,14 +305,12 @@ else:
             for emo, value in average_emotions.items():
                 st.write(f"**{emo}:** {round(value, 2)}")
             
-            # Reconstruir y mostrar el gráfico de Barras para las emociones promedio
             bar_chart_json = data.get("bar_chart")
             if bar_chart_json:
                 bar_fig = go.Figure(json.loads(bar_chart_json))
                 st.plotly_chart(bar_fig)
         else:
             st.error("Error al obtener el perfil. Asegúrate de tener entradas en el diario.")
-
     
     elif service_option == "Objetivo":
         st.title("Objetivos Personales")
