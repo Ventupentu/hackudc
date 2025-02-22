@@ -282,27 +282,21 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
         "Conscientiousness": round(conscientiousness, 2),
     }
     
-#    if average_emotions["Angry"] > 0.6:
- #       eneagrama = "Tipo 8: El Desafiador"
-  #  elif average_emotions["Sad"] > 0.6:
-   #     eneagrama = "Tipo 4: El Individualista"
-    #elif average_emotions["Happy"] > 0.6:
-#        eneagrama = "Tipo 7: El Entusiasta"
- #   elif average_emotions["Fear"] > 0.6:
-  #      eneagrama = "Tipo 6: El Leal"
-   # elif average_emotions["Surprise"] > 0.6:
-    #    eneagrama = "Tipo 3: El Triunfador"
-#    elif average_emotions["Angry"] < 0.2 and average_emotions["Sad"] < 0.2 and average_emotions["Fear"] < 0.2:
- #       eneagrama = "Tipo 9: El Pacificador"
-  #  elif average_emotions["Happy"] > 0.5 and average_emotions["Sad"] < 0.4 and average_emotions["Fear"] < 0.4:
-   #     eneagrama = "Tipo 2: El Ayudador"
-    #elif average_emotions["Sad"] > 0.5 and average_emotions["Happy"] < 0.4:
-#        eneagrama = "Tipo 4: El Individualista"
- #   elif average_emotions["Surprise"] > 0.4 and average_emotions["Angry"] < 0.3:
-  #      eneagrama = "Tipo 3: El Triunfador"
-   # else:
+    def list_of_dicts_to_entries_text(entries: list) -> str:
+        text_entries = ""
+        for entry in entries:
+            date = entry["date"]
+            text = entry["entry"]
+            emotions = entry.get("emotions", {})
+            
+            text_entries += f"Fecha: {date}\n"
+            text_entries += f"Entrada: {text}\n"
+            text_entries += "Emociones:\n"
+            for emotion, value in emotions.items():
+                text_entries += f"- {emotion}: {value}\n"
+            text_entries += "\n"
+        return text_entries
 
-    # Usar este formato legible con una lista de diccionarios
     entries_text = list_of_dicts_to_entries_text(diary_entries)
 
     # Ahora pasar esta cadena al LLM
