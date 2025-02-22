@@ -73,6 +73,19 @@ def list_of_dicts_to_entries_text(entries: list) -> str:
         text_entries += "\n"  # Línea vacía entre entradas
     return text_entries
 
+@app.get("/start_chat")
+async def start_chat(username : str = Query(...)):
+    #Vamos a intentar recuperar la conversación de la base de datos
+    #Tanto para que la vea el usuario como para que la IA pueda tener contexto
+    #Un máximo de diez mensajes, para no saturar la API de Mistral
+    # 10 del usuario, 10 de la IA
+    conversation_list = db.get_chat_history(username, 10)
+    print("------------------------------------------------")
+    print("conversación recuperada:", conversation_list)
+    print("----------------------------------------------------")
+    return {"conversacion": conversation_list}
+    
+
 @app.post("/chat")
 async def chat(conversation: Conversation):
     if not conversation.messages:
@@ -80,6 +93,7 @@ async def chat(conversation: Conversation):
     username = conversation.username
     # Convertir mensajes a diccionarios
     conversation_list = [msg.dict() for msg in conversation.messages]
+    print("Conversación:", conversation_list)
 
     # Analizar emociones del último mensaje del usuario
     last_message = conversation.messages[-1]
@@ -87,14 +101,16 @@ async def chat(conversation: Conversation):
     if last_message.role == "user":
         emociones = te.get_emotion(last_message.content)
     emocion_dominante = max(emociones, key=emociones.get, default="neutral")
+    print("Emocion:", emocion_dominante)
 
     # Crear un perfil emocional simple a partir del diario
     perfil = perfilar(username)
+    print(f"Perfil emocional: {perfil}")
 
     # Crear un mensaje adicional para orientar a la IA
     mensaje_emocional = {
         "role": "system",
-        "content": f"Eres un chatbot emocional orientado a apoyar al usuario. El usuario de nombre {username} parece estar sintiendo '{emocion_dominante}' en su último mensaje. Ajusta tu respuesta para ser apropiada a esta emoción. Ten en cuenta esta característica del usuario: '{perfil}'."
+        "content": f"Eres un chatbot emocional orientado a apoyar al usuario. El usuario de nombre {username} parece estar sintiendo '{emocion_dominante}' en su último mensaje. Ajusta tu respuesta para ser apropiada a esta emoción. Ten en cuenta esta característica del usuario que ha mostrado a lo largo del tiempo: '{perfil}'."
     } 
 
     # Insertar el mensaje de emoción al historial
@@ -102,6 +118,16 @@ async def chat(conversation: Conversation):
 
     # Llamar a la API de Mistral con el historial actualizado
     respuesta = call_mistral_rag(conversation_list)
+
+    # Guardamos el último trozo de conversación en la base de datos
+    piece_of_conversation = {
+        "date" : datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "human_message" : last_message.content,
+        "bot_message" : respuesta,
+        "emotions" : emociones,
+    }
+
+    db.insert_chat_history(username, piece_of_conversation)
     return {"respuesta": respuesta, "emociones": emociones}
 
 def perfilar(username: str) -> dict:

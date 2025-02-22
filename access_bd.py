@@ -34,24 +34,21 @@ class AccessBD:
             json_entries.append(json_entry)
         return json_entries
     
-    def list_to_chat_json(self, entries: list) -> list:
-        """Convertir la lista de entradas del diario a un formato JSON"""
-        json_entries = []
-        for entry in entries:
-            json_entry = {
-                "date": entry[0].strftime("%Y-%m-%d"),
-                "human_message": entry[1],
-                "bot_message": entry[2],
-                "emotions": {
-                    "Happy": entry[3],
-                    "Angry": entry[4],
-                    "Surprise": entry[5],
-                    "Sad": entry[6],
-                    "Fear": entry[7]
-                }
+    def list_to_chat_json(self, question_answers: list) -> list:
+        """Convertir la lista de conversaciones a un formato adecuado al chatbot"""
+        messages = []
+        for question_answer in question_answers:
+            question = {
+                "role": 'user',
+                "message": question_answer[0]
             }
-            json_entries.append(json_entry)
-        return json_entries
+            answer = {
+                "role": 'bot',
+                "message": question_answer[1]
+            }
+            messages.append(question)
+            messages.append(answer)
+        return messages
     
     def insert(self, query, values):
         cursor = self.connection.cursor()
@@ -75,7 +72,8 @@ class AccessBD:
         CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
             username VARCHAR(255) UNIQUE,
-            password VARCHAR(255) NOT NULL
+            password VARCHAR(255) NOT NULL,
+            ngrama INT DEFAULT 0
         )
         """)
 
@@ -262,6 +260,7 @@ class AccessBD:
             return None
 
     def insert_chat_history(self, user: str, chat_history: dict):
+        """Insertar la última pieza de la conversación entre el usuario y el bot"""
         cursor = self.connection.cursor()
 
         # Obtener el id del usuario
@@ -304,7 +303,7 @@ class AccessBD:
         if limit is None:
         
             cursor.execute("""
-                        SELECT date, human_message, bot_message, happy, angry, surprise, sad, fear
+                        SELECT date, human_message, bot_message
                         FROM chat_history
                         WHERE user_id = %s
                         ORDER BY date
@@ -313,7 +312,7 @@ class AccessBD:
             cursor.execute("""
                         SELECT *
                         FROM (
-                            SELECT date, human_message, bot_message, happy, angry, surprise, sad, fear
+                            SELECT date, human_message, bot_message
                             FROM chat_history
                             WHERE user_id = %s
                             ORDER BY date DESC
@@ -328,6 +327,14 @@ class AccessBD:
     def close(self):
         self.connection.close()
 
+    """
+    def upgrade_ngrama(self):
+        cursor = self.connection.cursor()
+        cursor.execute("ALTER TABLE users ADD COLUMN ngrama INT DEFAULT 0")
+        cursor.execue("UPDATE users SET ngrama = 0")
+        self.connection.commit()
+        cursor.close()
+    """
     def drop_table(self):
         cursor = self.connection.cursor()
         cursor.execute("DROP TABLE diary_entries")
@@ -356,4 +363,5 @@ if __name__ == '__main__':
 
     print(access_bd.get_diary_entries("Sergio"))
     access_bd.close()
+
     

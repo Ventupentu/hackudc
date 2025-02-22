@@ -121,6 +121,11 @@ def send_message():
     user_input = st.session_state.get("user_input", "")
     if user_input:
         st.session_state.messages.append({"role": "user", "content": user_input})
+        if len(st.session_state.messages) > 20:
+            # Para mantener el limite de 20 mensajes en el chat (10 user, 10 assistant)
+            #Eliminamos el primero de la IA y el primero del usuario
+            st.session_state.messages.pop(0)
+            st.session_state.messages.pop(0)
         payload = {"messages": st.session_state.messages, "username": st.session_state.username}
         response = requests.post(f"{URL}/chat", json=payload)
         if response.ok:
@@ -149,6 +154,7 @@ if not st.session_state.logged_in:
                     st.session_state.logged_in = True
                     st.session_state.username = username
                     st.session_state.password = password
+                    st.session_state.started_chat = False
                     st.rerun()
                 else:
                     st.error("Credenciales inválidas o error en el login.")
@@ -174,10 +180,21 @@ else:
         st.session_state.password = ""
         st.session_state.messages = []
         st.session_state.edit_mode = False
+        st.session_state.started_chat = False
         st.rerun()
     
     if service_option == "Chatbot":
         st.title("Chatbot Emocional - Guía Psicológica")
+        if not st.session_state.started_chat:
+            response = requests.get(f"{URL}/start_chat", params={"username": st.session_state.username})
+            if response.status_code == 200:
+                data = response.json()
+                conversation = response.json().get("conversation", [])
+                if len(conversation) > 0:
+                    st.session_state.messages = conversation
+                else:
+                    st.session_state.messages.append({"role": "assistant", "content": f"Hola, soy tu asistente emocional. ¿En qué puedo ayudarte hoy, {st.session_state.username}?"})
+                st.session_state.started_chat = True
         conversation_container = st.container()
         with conversation_container:
             st.markdown("### Conversación")
