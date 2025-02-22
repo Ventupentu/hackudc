@@ -5,3 +5,4 @@ requests
 uvicorn
 mysql.connector
 bcrypt
+emoji==1.6.3

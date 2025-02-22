@@ -6,7 +6,10 @@ import os
 class AccessBD:
     def __init__(self):
         load_dotenv()
-        self.connection = mysql.connector.connect(
+        self.connection = self.get_db_connection()
+
+    def get_db_connection(self):
+        return mysql.connector.connect(
             host=os.getenv('DB_HOST'),
             user=os.getenv('DB_USER1'),
             password=os.getenv('DB_PASSWORD'),
@@ -133,6 +136,13 @@ class AccessBD:
         self.connection.commit()
         cursor.close()
 
+    def check_user(self, username: str) -> bool:
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT COUNT(*) FROM users WHERE username = %s", (username,))
+        (count,) = cursor.fetchone()
+        cursor.close()
+        return count > 0
+
     def verify_user(self, username: str, password: str) -> bool:
         cursor = self.connection.cursor()
         cursor.execute("SELECT password FROM users WHERE username = %s", (username,))
@@ -140,7 +150,7 @@ class AccessBD:
         cursor.close()
 
         if result:
-            match = bcrypt.checkpw(password.encode('utf-8'), result[0])
+            match = bcrypt.checkpw(password.encode('utf-8'), result[0].encode('utf-8'))
             if not match:
                 print("Contraseña incorrecta")
             return match
@@ -165,7 +175,7 @@ class AccessBD:
         INSERT INTO diary_entries (user_id, date, entry, happy, angry, surprise, sad, fear)
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (user_id, diary_entry['date'], 
-              diary_entry['entry'], 
+              diary_entry['text'], 
               diary_entry['emotions']['Happy'], 
               diary_entry['emotions']['Angry'], 
               diary_entry['emotions']['Surprise'], 
@@ -301,5 +311,7 @@ if __name__ == '__main__':
 
     entries = access_bd.get_diary_entries("user1", 2)
     print(entries)
+    print(access_bd.verify_user("Adan", "Putero"))
+    print(access_bd.get_diary_entries("Adan"))
     access_bd.close()
     
