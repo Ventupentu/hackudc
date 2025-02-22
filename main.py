@@ -125,24 +125,29 @@ def perfilar(username: str) -> dict:
     for entry_data in diary_entries:
         emociones = entry_data.get("emociones", {})
         for emo in perfil.keys():
-            perfil[emo] += emociones.get(emo, 0)
+            perfil[emo] += float(emociones.get(emo, float(0)))  
         count += 1
+
     if count == 0:
-        raise HTTPException(status_code=404, detail="No se encontraron entradas válidas")
+        return {"perfil_emocional": {}, "sugerencia": "No hay datos suficientes"}
+
+    # Normalizar valores dividiendo entre count
     for emo in perfil:
-        perfil[emo] = perfil[emo] / count
-    perfil_personalidad = "Personalidad equilibrada"
-    if perfil["Sad"] > 0.5:
-        perfil_personalidad = "Tendencia a la melancolía"
-    if perfil["Angry"] > 0.5:
-        perfil_personalidad = "Tendencia a la irritabilidad"
-    if perfil["Happy"] > 0.5:
-        perfil_personalidad = "Tendencia a la felicidad"
-    if perfil["Surprise"] > 0.5:
-        perfil_personalidad = "Tendencia a la sorpresa"
-    if perfil["Fear"] > 0.5:
-        perfil_personalidad = "Tendencia al miedo"
-    return {"perfil_emocional": perfil, "sugerencia": perfil_personalidad}
+        perfil[emo] /= count
+
+    # Determinar la emoción dominante
+    emocion_dominante = max(perfil, key=perfil.get)
+    
+    # Determinar la personalidad basada en la emoción más alta
+    sugerencia = {
+        "Happy": "Tendencia a la felicidad",
+        "Sad": "Tendencia a la melancolía",
+        "Angry": "Tendencia a la irritabilidad",
+        "Surprise": "Tendencia a la sorpresa",
+        "Fear": "Tendencia al miedo"
+    }.get(emocion_dominante, "Personalidad equilibrada")
+
+    return {"perfil_emocional": perfil, "sugerencia": sugerencia}
 
 # ----------------------------------------------
 # Endpoint de Registro
