@@ -194,7 +194,7 @@ class AccessBD:
         self.connection.commit()
         cursor.close()
 
-    def get_diary_entries(self, user: str, limit: int = None) -> list:
+    def get_diary_entries(self, user: str, limit: int = 50) -> list:
         """
         Obtener todas las entradas del diario de un usuario
         :param user: Nombre de usuario
@@ -354,10 +354,6 @@ if __name__ == '__main__':
     """
     
 
-    entries = access_bd.get_diary_entries("user1", 2)
-    print(entries)
-    print(access_bd.verify_user("Adan", "Putero"))
-    print(access_bd.get_diary_entries("Adan"))
-    print(access_bd.get_diary_entry("Adan", "2025-02-22"))
+    print(access_bd.get_diary_entries("Sergio"))
     access_bd.close()
     

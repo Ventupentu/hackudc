@@ -170,7 +170,7 @@ async def agregar_diario(entry: DiaryEntry):
 
     if entry_for_date is not None:
         # Sobrescribir la entrada con el nuevo texto (y recalcular las emociones)
-        new_text = f"{entry_for_date['text']}\n{entry.entry}"
+        new_text = f"{entry_for_date['entry']} \n\n{entry.entry}"
         new_emotions = te.get_emotion(new_text)
         entry_for_date["entry"] = new_text
         entry_for_date["emotions"] = new_emotions
@@ -196,47 +196,6 @@ async def obtener_diario(username: str = Query(...), password: str = Query(...))
         raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
     return {"diario": diary}
 
-# ----------------------------------------------
-# Endpoint para obtener tendencias emocionales (Perfil)
-# ----------------------------------------------
-@app.get("/perfil")
-async def obtener_perfil():
-    conn = db.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT entry FROM user_prueba WHERE entry <> ''")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    if not rows:
-        raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
-    perfil = {"Happy": 0, "Sad": 0, "Angry": 0, "Surprise": 0, "Fear": 0}
-    count = 0
-    for row in rows:
-        try:
-            diary_entries = json.loads(row["entry"])
-            for entry_data in diary_entries:
-                emociones = entry_data.get("emociones", {})
-                for emo in perfil.keys():
-                    perfil[emo] += emociones.get(emo, 0)
-                count += 1
-        except Exception:
-            continue
-    if count == 0:
-        raise HTTPException(status_code=404, detail="No se encontraron entradas válidas")
-    for emo in perfil:
-        perfil[emo] = perfil[emo] / count
-    perfil_personalidad = "Personalidad equilibrada"
-    if perfil["Sad"] > 0.5:
-        perfil_personalidad = "Tendencia a la melancolía"
-    if perfil["Angry"] > 0.5:
-        perfil_personalidad = "Tendencia a la irritabilidad"
-    if perfil["Happy"] > 0.5:
-        perfil_personalidad = "Tendencia a la felicidad"
-    if perfil["Surprise"] > 0.5:
-        perfil_personalidad = "Tendencia a la sorpresa"
-    if perfil["Fear"] > 0.5:
-        perfil_personalidad = "Tendencia al miedo"
-    return {"perfil_emocional": perfil, "sugerencia": perfil_personalidad}
 
 # ----------------------------------------------
 # Endpoint para Profiling basado en el historial del Diario
@@ -246,22 +205,7 @@ import plotly.graph_objects as go
 
 @app.get("/profiling")
 async def obtener_profiling(username: str = Query(...), password: str = Query(...)):
-    conn = db.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT entry, password FROM user_prueba WHERE username = %s LIMIT 1", (username,))
-    result = cursor.fetchone()
-    if not result or not pwd_context.verify(password, result["password"]):
-        cursor.close()
-        conn.close()
-        raise HTTPException(status_code=400, detail="Credenciales inválidas")
-    diary_json = result["entry"]
-    cursor.close()
-    conn.close()
-    
-    try:
-        diary_entries = json.loads(diary_json) if diary_json and diary_json.strip() != "" else []
-    except Exception:
-        diary_entries = []
+    diary_entries = db.get_diary_entries(username)
     if not diary_entries:
         raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
     
@@ -272,7 +216,7 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
     
     for entry in diary_entries:
         try:
-            ts = datetime.fromisoformat(entry["timestamp"])
+            ts = datetime.fromisoformat(entry["date"])
         except Exception:
             continue
         days_diff = (now - ts).days
