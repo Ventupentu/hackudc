@@ -9,3 +9,10 @@ pydantic
 sqlalchemy
 psycopg2-binary
 streamlit
+pyjwt
+passlib[bcrypt]
+python-decouple
+
+
+
+
