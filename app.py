@@ -266,7 +266,6 @@ else:
     
     elif service_option == "Profiling":
         st.title("Perfil de Personalidad")
-        # Solicitar datos del endpoint de profiling
         params = {"username": st.session_state.username, "password": st.session_state.password}
         response = requests.get(f"{URL}/profiling", params=params)
         if response.ok:
@@ -279,25 +278,13 @@ else:
             for dimension, score in big_five.items():
                 st.write(f"**{dimension}:** {score}")
             
-            # Gráfico de Radar para Big Five usando Plotly
+            # Reconstruir y mostrar el gráfico Radar para Big Five
+            import json
             import plotly.graph_objects as go
-            dimensions = list(big_five.keys())
-            scores = list(big_five.values())
-            dimensions += [dimensions[0]]
-            scores += [scores[0]]
-            radar_fig = go.Figure(
-                data=[
-                    go.Scatterpolar(r=scores, theta=dimensions, fill='toself', name='Big Five')
-                ],
-                layout=go.Layout(
-                    polar=dict(
-                        radialaxis=dict(visible=True, range=[0, 1])
-                    ),
-                    showlegend=False,
-                    title="Perfil Big Five"
-                )
-            )
-            st.plotly_chart(radar_fig)
+            radar_chart_json = data.get("radar_chart")
+            if radar_chart_json:
+                radar_fig = go.Figure(json.loads(radar_chart_json))
+                st.plotly_chart(radar_fig)
             
             st.subheader("Clasificación Eneagrama")
             st.write(eneagrama)
@@ -306,21 +293,14 @@ else:
             for emo, value in average_emotions.items():
                 st.write(f"**{emo}:** {round(value, 2)}")
             
-            # Gráfico de Barras para las emociones promedio
-            emotions_fig = go.Figure(
-                data=[
-                    go.Bar(x=list(average_emotions.keys()), y=[round(v, 2) for v in average_emotions.values()])
-                ],
-                layout=go.Layout(
-                    title="Emociones Promedio",
-                    xaxis_title="Emoción",
-                    yaxis_title="Valor",
-                    yaxis=dict(range=[0,1])
-                )
-            )
-            st.plotly_chart(emotions_fig)
+            # Reconstruir y mostrar el gráfico de Barras para las emociones promedio
+            bar_chart_json = data.get("bar_chart")
+            if bar_chart_json:
+                bar_fig = go.Figure(json.loads(bar_chart_json))
+                st.plotly_chart(bar_fig)
         else:
             st.error("Error al obtener el perfil. Asegúrate de tener entradas en el diario.")
+
     
     elif service_option == "Objetivo":
         st.title("Objetivos Personales")

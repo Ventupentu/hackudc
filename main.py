@@ -309,6 +309,8 @@ async def obtener_perfil():
 # Endpoint para Profiling basado en el historial del Diario
 # Modelos: Big Five y Eneagrama (usando mayor peso para entradas recientes)
 # ----------------------------------------------
+import plotly.graph_objects as go  # Asegúrate de importar plotly
+
 @app.get("/profiling")
 async def obtener_profiling(username: str = Query(...), password: str = Query(...)):
     conn = get_db_connection()
@@ -371,10 +373,46 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
     else:
         eneagrama = "Tipo 9: El Pacificador"
     
+    # --- Generación del gráfico Radar para Big Five ---
+    dimensions = list(big_five.keys())
+    scores = list(big_five.values())
+    # Cerrar el polígono
+    dimensions.append(dimensions[0])
+    scores.append(scores[0])
+    
+    radar_fig = go.Figure(
+        data=[
+            go.Scatterpolar(r=scores, theta=dimensions, fill='toself', name='Big Five')
+        ],
+        layout=go.Layout(
+            polar=dict(
+                radialaxis=dict(visible=True, range=[0, 1])
+            ),
+            showlegend=False,
+            title="Perfil Big Five"
+        )
+    )
+    
+    # --- Generación del gráfico de Barras para emociones promedio ---
+    bar_fig = go.Figure(
+        data=[
+            go.Bar(x=list(average_emotions.keys()), y=[round(v, 2) for v in average_emotions.values()])
+        ],
+        layout=go.Layout(
+            title="Emociones Promedio",
+            xaxis_title="Emoción",
+            yaxis_title="Valor",
+            yaxis=dict(range=[0,1])
+        )
+    )
+    
+    # Convertir las figuras a JSON para enviarlas al cliente
     return {
         "big_five": big_five,
         "eneagrama": eneagrama,
-        "average_emotions": average_emotions
+        "average_emotions": average_emotions,
+        "radar_chart": radar_fig.to_json(),
+        "bar_chart": bar_fig.to_json()
     }
 
 # ----------------------------------------------
