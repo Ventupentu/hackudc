@@ -20,5 +20,16 @@
             "Sad": 0,
             "Fear": 0
         }
+    },
+    {
+        "fecha": "2025-02-22T05:30:18.095334",
+        "texto": "Hoy he tenido un dia moderado. Me ha alegrado un cumplido de un amigo",
+        "emociones": {
+            "Happy": 0,
+            "Angry": 0,
+            "Surprise": 0,
+            "Sad": 0,
+            "Fear": 0
+        }
     }
 ]
