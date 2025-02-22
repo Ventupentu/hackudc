@@ -1,6 +1,17 @@
 # archivo: app.py
 import streamlit as st
 import requests
+import threading
+import uvicorn
+
+# Inicia uvicorn en un hilo en segundo plano para ejecutar tu backend FastAPI
+def start_fastapi():
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, log_level="info")
+
+if "api_started" not in st.session_state:
+    thread = threading.Thread(target=start_fastapi, daemon=True)
+    thread.start()
+    st.session_state.api_started = True
 
 # Inicializar variables de sesión para el login si aún no existen
 if "logged_in" not in st.session_state:
