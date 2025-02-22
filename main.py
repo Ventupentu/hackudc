@@ -11,29 +11,17 @@ from dotenv import load_dotenv
 import uvicorn
 import mysql.connector
 
-from passlib.context import CryptContext
+from access_bd import AccessBD
 
 load_dotenv()  # Carga las variables de entorno
 
 app = FastAPI()
 
-# Configuración del contexto para hash de contraseñas (bcrypt)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+db = AccessBD()
 
 # Descarga recursos de NLTK (si aún no se han descargado)
 nltk.download('punkt_tab')
 nltk.download('punkt')
-
-# ----------------------------------------------
-# Función para obtener conexión a la base de datos MySQL
-# ----------------------------------------------
-def get_db_connection():
-    return mysql.connector.connect(
-         host=os.environ["DB_HOST"],
-         database=os.environ["DB_NAME"],
-         user=os.environ["DB_USER"],
-         password=os.environ["DB_PASSWORD"]
-    )
 
 # ----------------------------------------------
 # Modelos para Chat, Autenticación y Diario
@@ -53,7 +41,7 @@ class UserAuth(BaseModel):
 class DiaryEntry(BaseModel):
     username: str
     password: str
-    texto: str
+    entry: str
     fecha: str = None  # Opcional; si no se proporciona, se usará la fecha actual.
 
 # ----------------------------------------------
@@ -108,7 +96,7 @@ async def chat(conversation: Conversation):
     return {"respuesta": respuesta, "emociones": emociones}
 
 def perfilar():
-    conn = get_db_connection()
+    conn = db.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT entry FROM user_prueba WHERE entry <> ''")
     rows = cursor.fetchall()
@@ -151,24 +139,10 @@ def perfilar():
 # ----------------------------------------------
 @app.post("/register")
 async def register(user: UserAuth):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT COUNT(*) FROM user_prueba WHERE username = %s", (user.username,))
-    (count,) = cursor.fetchone()
-    if count > 0:
-        cursor.close()
-        conn.close()
+    user_exit = db.check_user(user.username)
+    if user_exit:
         raise HTTPException(status_code=400, detail="El usuario ya existe")
-    current_time = datetime.now().isoformat()
-    empty_entry = "[]"  # Arreglo JSON vacío
-    hashed_password = pwd_context.hash(user.password)
-    cursor.execute(
-        "INSERT INTO user_prueba (username, password, date, entry) VALUES (%s, %s, %s, %s)",
-        (user.username, hashed_password, current_time, empty_entry)
-    )
-    conn.commit()
-    cursor.close()
-    conn.close()
+    db.register_user(user.username, user.password)
     return {"mensaje": "Usuario registrado exitosamente"}
 
 # ----------------------------------------------
@@ -176,16 +150,8 @@ async def register(user: UserAuth):
 # ----------------------------------------------
 @app.post("/login")
 async def login(user: UserAuth):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT password FROM user_prueba WHERE username = %s LIMIT 1", (user.username,))
-    result = cursor.fetchone()
-    cursor.close()
-    conn.close()
-    if not result:
-        raise HTTPException(status_code=400, detail="Credenciales inválidas")
-    stored_password = result[0]
-    if not pwd_context.verify(user.password, stored_password):
+    success = db.verify_user(user.username, user.password)
+    if not success:
         raise HTTPException(status_code=400, detail="Credenciales inválidas")
     return {"mensaje": "Login exitoso"}
 
@@ -194,81 +160,48 @@ async def login(user: UserAuth):
 # ----------------------------------------------
 @app.post("/diario")
 async def agregar_diario(entry: DiaryEntry):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT password, entry FROM user_prueba WHERE username = %s LIMIT 1", (entry.username,))
-    result = cursor.fetchone()
-    if not result:
-        cursor.close()
-        conn.close()
+    success = db.verify_user(entry.username, entry.password)
+    if not success:
         raise HTTPException(status_code=400, detail="Credenciales inválidas")
-    stored_password = result[0]
-    if not pwd_context.verify(entry.password, stored_password):
-        cursor.close()
-        conn.close()
-        raise HTTPException(status_code=400, detail="Credenciales inválidas")
-    existing_entry = result[1]
-    try:
-        diary_list = json.loads(existing_entry) if existing_entry and existing_entry.strip() != "" else []
-    except Exception:
-        diary_list = []
+    
     # Usar la fecha proporcionada o, si es None, la fecha actual
     target_date = entry.fecha if entry.fecha is not None else datetime.now().strftime("%Y-%m-%d")
-    existing_for_date = None
-    for d in diary_list:
-        if d.get("timestamp", "")[:10] == target_date:
-            existing_for_date = d
-            break
-    if existing_for_date:
-        # Sobrescribir la entrada con el nuevo texto (y recalcular las emociones)
-        new_text = entry.texto
-        new_emotions = te.get_emotion(new_text)
-        existing_for_date["texto"] = new_text
-        existing_for_date["emociones"] = new_emotions
-        existing_for_date["timestamp"] = datetime.now().isoformat()
-        updated_entry = existing_for_date
-    else:
-        fecha = datetime.now().isoformat()
-        new_emotions = te.get_emotion(entry.texto)
-        updated_entry = {"texto": entry.texto, "emociones": new_emotions, "timestamp": fecha}
-        diary_list.append(updated_entry)
-    new_diary_json = json.dumps(diary_list, ensure_ascii=False)
-    cursor.execute("UPDATE user_prueba SET date = %s, entry = %s WHERE username = %s", (datetime.now().isoformat(), new_diary_json, entry.username))
-    conn.commit()
-    cursor.close()
-    conn.close()
-    return {"mensaje": "Entrada actualizada en el diario", "registro": updated_entry}
+    entry_for_date = db.get_diary_entry(entry.username, target_date)
 
+    if entry_for_date is not None:
+        # Sobrescribir la entrada con el nuevo texto (y recalcular las emociones)
+        new_text = f"{entry_for_date['text']}\n{entry.entry}"
+        new_emotions = te.get_emotion(new_text)
+        entry_for_date["entry"] = new_text
+        entry_for_date["emotions"] = new_emotions
+        entry_for_date["date"] = target_date
+        updated_entry = entry_for_date
+    else:
+        fecha = target_date
+        new_emotions = te.get_emotion(entry.entry)
+        updated_entry = {"entry": entry.entry, "emotions": new_emotions, "date": fecha}
+    
+    db.insert_diary_entry(entry.username, updated_entry)
+    return {"mensaje": "Entrada actualizada en el diario", "registro": updated_entry}
 # ----------------------------------------------
 # Endpoint para obtener la entrada del Diario para un usuario (por fecha)
 # ----------------------------------------------
 @app.get("/diario")
 async def obtener_diario(username: str = Query(...), password: str = Query(...)):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT password, entry FROM user_prueba WHERE username = %s LIMIT 1", (username,))
-    result = cursor.fetchone()
-    if not result or not pwd_context.verify(password, result["password"]):
-        cursor.close()
-        conn.close()
+    success = db.verify_user(username, password)
+    if not success:
         raise HTTPException(status_code=400, detail="Credenciales inválidas")
-    diary_json = result["entry"]
-    cursor.close()
-    conn.close()
-    try:
-        diary_entries = json.loads(diary_json) if diary_json and diary_json.strip() != "" else []
-    except Exception:
-        diary_entries = []
-    if not diary_entries:
+    diary = db.get_diary_entries(username)
+    if not diary:
         raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
-    return {"diario": diary_entries}
+    return {"diario": diary}
 
 # ----------------------------------------------
 # Endpoint para obtener tendencias emocionales (Perfil)
 # ----------------------------------------------
 @app.get("/perfil")
 async def obtener_perfil():
-    conn = get_db_connection()
+    conn = db.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT entry FROM user_prueba WHERE entry <> ''")
     rows = cursor.fetchall()
@@ -309,11 +242,11 @@ async def obtener_perfil():
 # Endpoint para Profiling basado en el historial del Diario
 # Modelos: Big Five y Eneagrama (usando mayor peso para entradas recientes)
 # ----------------------------------------------
-import plotly.graph_objects as go  # Asegúrate de importar plotly
+import plotly.graph_objects as go
 
 @app.get("/profiling")
 async def obtener_profiling(username: str = Query(...), password: str = Query(...)):
-    conn = get_db_connection()
+    conn = db.get_db_connection()
     cursor = conn.cursor(dictionary=True)
     cursor.execute("SELECT entry, password FROM user_prueba WHERE username = %s LIMIT 1", (username,))
     result = cursor.fetchone()

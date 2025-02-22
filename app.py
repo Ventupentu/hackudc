@@ -114,6 +114,7 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 URL="https://hackudc.onrender.com"
+URL="http://localhost:8000"
 
 def send_message():
     user_input = st.session_state.get("user_input", "")
@@ -223,7 +224,7 @@ else:
         
         diary_by_date = {}
         for entry in diary_entries:
-            day = entry["timestamp"][:10]
+            day = entry["date"][:10]
             diary_by_date.setdefault(day, []).append(entry)
         
         st.subheader("Selecciona la fecha")
