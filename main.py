@@ -229,39 +229,87 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
         raise HTTPException(status_code=404, detail="No se pudieron calcular los perfiles")
     
     average_emotions = {k: v / total_weight for k, v in weighted_emotions.items()}
+
+    #Ponderación de emociones (esto puede ajustarse)
+    emotion_weights = {
+        "Sad": 0.3,   # A mayor tristeza, mayor neuroticismo
+        "Fear": 0.3,  # A mayor miedo, mayor neuroticismo
+        "Angry": 0.4, # A mayor ira, mayor neuroticismo
+        "Happy": 0.3, # Felicidad se asocia con extraversión y amabilidad
+        "Surprise": 0.4 # Sorpresa también se asocia con extraversión
+    }
     
-    neuroticism = (average_emotions["Sad"] + average_emotions["Fear"] + average_emotions["Angry"]) / 3
-    extraversion = (average_emotions["Happy"] + average_emotions["Surprise"]) / 2
-    agreeableness = average_emotions["Happy"]
+    neuroticism = (average_emotions["Sad"] * emotion_weights["Sad"] + 
+                average_emotions["Fear"] * emotion_weights["Fear"] + 
+                average_emotions["Angry"] * emotion_weights["Angry"]) / (emotion_weights["Sad"] + emotion_weights["Fear"] + emotion_weights["Angry"])
+
+    extraversion = (average_emotions["Happy"] * emotion_weights["Happy"] + 
+                    average_emotions["Surprise"] * emotion_weights["Surprise"]) / (emotion_weights["Happy"] + emotion_weights["Surprise"])
+
+    agreeableness = (average_emotions["Happy"] * 0.5 + (1 - average_emotions["Angry"]) * 0.5)  # Menos ira y más felicidad da mayor amabilidad
+
+    # Openness y Conscientiousness basados en el contenido del diario y emociones
+    # Si hay mucha sorpresa o emoción positiva, puede aumentar el Openness
+    openness = min(1.0, (average_emotions["Surprise"] + average_emotions["Happy"]) / 2)  # Valores entre 0 y 1
+
+    # Conscientiousness basado en la organización de las emociones (menos emociones caóticas)
+    conscientiousness = max(0.2, 1 - (average_emotions["Angry"] + average_emotions["Fear"]) / 2)  # Si las emociones son más negativas, la consciencia es baja
+
+    # Formato final del Big Five
     big_five = {
         "Neuroticism": round(neuroticism, 2),
         "Extraversion": round(extraversion, 2),
         "Agreeableness": round(agreeableness, 2),
-        "Openness": 0.5,
-        "Conscientiousness": 0.5,
+        "Openness": round(openness, 2),
+        "Conscientiousness": round(conscientiousness, 2),
     }
     
-    if average_emotions["Angry"] > 0.6:
-        eneagrama = "Tipo 8: El Desafiador"
-    elif average_emotions["Sad"] > 0.6:
-        eneagrama = "Tipo 4: El Individualista"
-    elif average_emotions["Happy"] > 0.6:
-        eneagrama = "Tipo 7: El Entusiasta"
-    elif average_emotions["Fear"] > 0.6:
-        eneagrama = "Tipo 6: El Leal"
-    elif average_emotions["Surprise"] > 0.6:
-        eneagrama = "Tipo 3: El Triunfador"
-    elif average_emotions["Angry"] < 0.2 and average_emotions["Sad"] < 0.2 and average_emotions["Fear"] < 0.2:
-        eneagrama = "Tipo 9: El Pacificador"
-    elif average_emotions["Happy"] > 0.5 and average_emotions["Sad"] < 0.4 and average_emotions["Fear"] < 0.4:
-        eneagrama = "Tipo 2: El Ayudador"
-    elif average_emotions["Sad"] > 0.5 and average_emotions["Happy"] < 0.4:
-        eneagrama = "Tipo 4: El Individualista"
-    elif average_emotions["Surprise"] > 0.4 and average_emotions["Angry"] < 0.3:
-        eneagrama = "Tipo 3: El Triunfador"
-    else:
-        eneagrama = "Tipo 5: El Investigador"
+#    if average_emotions["Angry"] > 0.6:
+ #       eneagrama = "Tipo 8: El Desafiador"
+  #  elif average_emotions["Sad"] > 0.6:
+   #     eneagrama = "Tipo 4: El Individualista"
+    #elif average_emotions["Happy"] > 0.6:
+#        eneagrama = "Tipo 7: El Entusiasta"
+ #   elif average_emotions["Fear"] > 0.6:
+  #      eneagrama = "Tipo 6: El Leal"
+   # elif average_emotions["Surprise"] > 0.6:
+    #    eneagrama = "Tipo 3: El Triunfador"
+#    elif average_emotions["Angry"] < 0.2 and average_emotions["Sad"] < 0.2 and average_emotions["Fear"] < 0.2:
+ #       eneagrama = "Tipo 9: El Pacificador"
+  #  elif average_emotions["Happy"] > 0.5 and average_emotions["Sad"] < 0.4 and average_emotions["Fear"] < 0.4:
+   #     eneagrama = "Tipo 2: El Ayudador"
+    #elif average_emotions["Sad"] > 0.5 and average_emotions["Happy"] < 0.4:
+#        eneagrama = "Tipo 4: El Individualista"
+ #   elif average_emotions["Surprise"] > 0.4 and average_emotions["Angry"] < 0.3:
+  #      eneagrama = "Tipo 3: El Triunfador"
+   # else:
+    def list_of_dicts_to_entries_text(entries: list) -> str:
+        """Convertir la lista de diccionarios de entradas del diario a un texto estructurado"""
+        text_entries = ""
+        for entry in entries:
+            # Asumimos que cada entry es un diccionario con "date", "entry", y "emotions"
+            date = entry["date"]
+            text = entry["entry"]
+            emotions = entry["emotions"]
+            
+            text_entries += f"Fecha: {date}\n"
+            text_entries += f"Entrada: {text}\n"
+            text_entries += f"Emociones:\n"
+            for emotion, value in emotions.items():
+                text_entries += f"- {emotion}: {value}\n"
+            text_entries += "\n"  # Añadir una línea vacía entre las entradas
         
+        return text_entries
+
+    # Usar este formato legible con una lista de diccionarios
+    entries_text = list_of_dicts_to_entries_text(diary_entries)
+
+    # Ahora pasar esta cadena al LLM
+    eneagrama = call_mistral_rag([{
+        "role": "system",
+        "content": f"Determina el tipo de eneagrama basado en las siguientes emociones y textos del diario:\n{entries_text}"
+    }])
+
     # --- Generación del gráfico Radar para Big Five ---
     dimensions = list(big_five.keys())
     scores = list(big_five.values())
