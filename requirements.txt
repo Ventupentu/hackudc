@@ -13,7 +13,8 @@ pyjwt
 passlib[bcrypt]
 python-decouple
 emoji==1.7.0
-
+mistralai
+bcrypt
 
 
 
