@@ -5,3 +5,7 @@ requests
 uvicorn
 mysql.connector
 bcrypt
+pydantic
+sqlalchemy
+psycopg2-binary
+streamlit
