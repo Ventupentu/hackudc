@@ -8,7 +8,6 @@ from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 from dotenv import load_dotenv
 import uvicorn
-import mysql.connector
 
 from access_bd import AccessBD
 
@@ -31,6 +30,7 @@ class Message(BaseModel):
 
 class Conversation(BaseModel):
     messages: list[Message]
+    username: str
 
 class UserAuth(BaseModel):
     username: str
@@ -62,9 +62,9 @@ def call_mistral_rag(conversation_messages: list[dict]) -> str:
 async def chat(conversation: Conversation):
     if not conversation.messages:
         raise HTTPException(status_code=400, detail="No hay mensajes en la conversación")
-
+    username = conversation.username
     # Convertir mensajes a diccionarios
-    conversation_list = [msg.dict() for msg in conversation.messages]
+    conversation_list = [msg.dump() for msg in conversation.messages]
 
     # Analizar emociones del último mensaje del usuario
     last_message = conversation.messages[-1]
@@ -76,14 +76,14 @@ async def chat(conversation: Conversation):
     emocion_dominante = max(emociones, key=emociones.get, default="neutral")
 
     # Crear un perfil emocional simple
-    perfil = perfilar()
+    perfil = perfilar(username)
     print(f"Perfil emocional: {perfil}")
 
     # Crear un mensaje adicional para orientar a la IA
     mensaje_emocional = {
         "role": "system",
-        "content": f"El usuario parece estar sintiendo '{emocion_dominante}'. Ajusta tu respuesta para ser apropiada a esta emoción. Ten en cuenta esta característica del usuario: '{perfil}'."
-    }
+        "content": f"Eres un chatbot emocional orientado a apoyar al usuario. El usuario de nombre {username} parece estar sintiendo. '{emocion_dominante}' en su último mensaje. Ajusta tu respuesta para ser apropiada a esta emoción. Ten en cuenta esta característica del usuario: '{perfil}'."
+    } 
 
     print(mensaje_emocional["content"])
 
@@ -95,27 +95,20 @@ async def chat(conversation: Conversation):
 
     return {"respuesta": respuesta, "emociones": emociones}
 
-def perfilar():
-    conn = db.get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT entry FROM user_prueba WHERE entry <> ''")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    if not rows:
+def perfilar(username: str) -> dict:
+    """Obtenemos el perfil emocional del usuario a partir de su historial de diario."""
+    # Obtener las entradas del diario del usuario
+    diary_entries = db.get_diary_entries(username)
+    if not diary_entries:
         raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
+        
     perfil = {"Happy": 0, "Sad": 0, "Angry": 0, "Surprise": 0, "Fear": 0}
     count = 0
-    for row in rows:
-        try:
-            diary_entries = json.loads(row["entry"])
-            for entry_data in diary_entries:
-                emociones = entry_data.get("emociones", {})
-                for emo in perfil.keys():
-                    perfil[emo] += emociones.get(emo, 0)
-                count += 1
-        except Exception:
-            continue
+    for entry_data in diary_entries:
+        emociones = entry_data.get("emociones", {})
+        for emo in perfil.keys():
+            perfil[emo] += emociones.get(emo, 0)
+        count += 1
     if count == 0:
         raise HTTPException(status_code=404, detail="No se encontraron entradas válidas")
     for emo in perfil:
