@@ -40,11 +40,11 @@ class AccessBD:
         for question_answer in question_answers:
             question = {
                 "role": 'user',
-                "message": question_answer[0]
+                "content": question_answer[0]
             }
             answer = {
-                "role": 'bot',
-                "message": question_answer[1]
+                "role": 'assistant',
+                "content": question_answer[1]
             }
             messages.append(question)
             messages.append(answer)
@@ -303,7 +303,7 @@ class AccessBD:
         if limit is None:
         
             cursor.execute("""
-                        SELECT date, human_message, bot_message
+                        SELECT human_message, bot_message, date
                         FROM chat_history
                         WHERE user_id = %s
                         ORDER BY date
@@ -312,7 +312,7 @@ class AccessBD:
             cursor.execute("""
                         SELECT *
                         FROM (
-                            SELECT date, human_message, bot_message
+                            SELECT human_message, bot_message, date
                             FROM chat_history
                             WHERE user_id = %s
                             ORDER BY date DESC
@@ -361,7 +361,7 @@ if __name__ == '__main__':
     """
     
 
-    print(access_bd.get_diary_entries("Sergio"))
+    print(access_bd.get_chat_history("Sergio"))
     access_bd.close()
 
     
