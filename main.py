@@ -370,9 +370,21 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
         eneagrama = "Tipo 4: El Individualista"
     elif average_emotions["Happy"] > 0.6:
         eneagrama = "Tipo 7: El Entusiasta"
-    else:
+    elif average_emotions["Fear"] > 0.6:
+        eneagrama = "Tipo 6: El Leal"
+    elif average_emotions["Surprise"] > 0.6:
+        eneagrama = "Tipo 3: El Triunfador"
+    elif average_emotions["Angry"] < 0.2 and average_emotions["Sad"] < 0.2 and average_emotions["Fear"] < 0.2:
         eneagrama = "Tipo 9: El Pacificador"
-    
+    elif average_emotions["Happy"] > 0.5 and average_emotions["Sad"] < 0.4 and average_emotions["Fear"] < 0.4:
+        eneagrama = "Tipo 2: El Ayudador"
+    elif average_emotions["Sad"] > 0.5 and average_emotions["Happy"] < 0.4:
+        eneagrama = "Tipo 4: El Individualista"
+    elif average_emotions["Surprise"] > 0.4 and average_emotions["Angry"] < 0.3:
+        eneagrama = "Tipo 3: El Triunfador"
+    else:
+        eneagrama = "Tipo 5: El Investigador"
+        
     # --- Generación del gráfico Radar para Big Five ---
     dimensions = list(big_five.keys())
     scores = list(big_five.values())
