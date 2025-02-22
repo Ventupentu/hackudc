@@ -87,6 +87,17 @@ class AccessBD:
         self.connection.commit()
         cursor.close()
 
+    def change_password(self, username: str, new_password: str):
+        cursor = self.connection.cursor()
+
+        # Hashear la nueva contraseña antes de guardarla en la base de datos
+        hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt())
+
+        cursor.execute("UPDATE users SET password = %s WHERE username = %s", (hashed_password, username))
+
+        self.connection.commit()
+        cursor.close()
+
     def verify_user(self, username: str, password: str) -> bool:
         cursor = self.connection.cursor()
         cursor.execute("SELECT password FROM users WHERE username = %s", (username,))
