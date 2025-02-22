@@ -74,13 +74,77 @@ def call_mistral_rag(conversation_messages: list[dict]) -> str:
 async def chat(conversation: Conversation):
     if not conversation.messages:
         raise HTTPException(status_code=400, detail="No hay mensajes en la conversación")
+
+    # Convertir mensajes a diccionarios
     conversation_list = [msg.dict() for msg in conversation.messages]
+
+    # Analizar emociones del último mensaje del usuario
     last_message = conversation.messages[-1]
     emociones = {}
     if last_message.role == "user":
         emociones = te.get_emotion(last_message.content)
+
+    # Determinar la emoción dominante
+    emocion_dominante = max(emociones, key=emociones.get, default="neutral")
+
+    # Crear un perfil emocional simple
+    perfil = perfilar()
+    print(f"Perfil emocional: {perfil}")
+
+    # Crear un mensaje adicional para orientar a la IA
+    mensaje_emocional = {
+        "role": "system",
+        "content": f"El usuario parece estar sintiendo '{emocion_dominante}'. Ajusta tu respuesta para ser apropiada a esta emoción. Ten en cuenta esta característica del usuario: '{perfil}'."
+    }
+
+    print(mensaje_emocional["content"])
+
+    # Insertar el mensaje de emoción al historial
+    conversation_list.insert(0, mensaje_emocional)
+
+    # Llamar a la API de Mistral con el historial actualizado
     respuesta = call_mistral_rag(conversation_list)
+
     return {"respuesta": respuesta, "emociones": emociones}
+
+def perfilar():
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("SELECT entry FROM user_prueba WHERE entry <> ''")
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+    if not rows:
+        raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
+    perfil = {"Happy": 0, "Sad": 0, "Angry": 0, "Surprise": 0, "Fear": 0}
+    count = 0
+    for row in rows:
+        try:
+            diary_entries = json.loads(row["entry"])
+            for entry_data in diary_entries:
+                emociones = entry_data.get("emociones", {})
+                for emo in perfil.keys():
+                    perfil[emo] += emociones.get(emo, 0)
+                count += 1
+        except Exception:
+            continue
+    if count == 0:
+        raise HTTPException(status_code=404, detail="No se encontraron entradas válidas")
+    for emo in perfil:
+        perfil[emo] = perfil[emo] / count
+    perfil_personalidad = "Personalidad equilibrada"
+    if perfil["Sad"] > 0.5:
+        perfil_personalidad = "Tendencia a la melancolía"
+    if perfil["Angry"] > 0.5:
+        perfil_personalidad = "Tendencia a la irritabilidad"
+    if perfil["Happy"] > 0.5:
+        perfil_personalidad = "Tendencia a la felicidad"
+    if perfil["Surprise"] > 0.5:
+        perfil_personalidad = "Tendencia a la sorpresa"
+    if perfil["Fear"] > 0.5:
+        perfil_personalidad = "Tendencia al miedo"
+    return {"perfil_emocional": perfil, "sugerencia": perfil_personalidad}
+
 
 # ----------------------------------------------
 # Endpoint de Registro
@@ -233,6 +297,12 @@ async def obtener_perfil():
         perfil_personalidad = "Tendencia a la melancolía"
     if perfil["Angry"] > 0.5:
         perfil_personalidad = "Tendencia a la irritabilidad"
+    if perfil["Happy"] > 0.5:
+        perfil_personalidad = "Tendencia a la felicidad"
+    if perfil["Surprise"] > 0.5:
+        perfil_personalidad = "Tendencia a la sorpresa"
+    if perfil["Fear"] > 0.5:
+        perfil_personalidad = "Tendencia al miedo"
     return {"perfil_emocional": perfil, "sugerencia": perfil_personalidad}
 
 # ----------------------------------------------
