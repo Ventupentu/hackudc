@@ -1,3 +1,4 @@
+import bcrypt
 import mysql.connector
 from dotenv import load_dotenv
 import os
@@ -51,7 +52,8 @@ class AccessBD:
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
             id INT AUTO_INCREMENT PRIMARY KEY,
-            username VARCHAR(255) UNIQUE
+            username VARCHAR(255) UNIQUE,
+            password VARCHAR(255) NOT NULL
         )
         """)
 
@@ -75,7 +77,32 @@ class AccessBD:
         self.connection.commit()
         cursor.close()
 
-    
+    def register_user(self, username: str, password: str):
+        cursor = self.connection.cursor()
+
+        # Hashear la contraseña antes de guardarla en la base de datos
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+        cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s)", (username, hashed_password))
+        self.connection.commit()
+        cursor.close()
+
+    def verify_user(self, username: str, password: str) -> bool:
+        cursor = self.connection.cursor()
+        cursor.execute("SELECT password FROM users WHERE username = %s", (username,))
+        result = cursor.fetchone()
+        cursor.close()
+
+        if result:
+            match = bcrypt.checkpw(password.encode('utf-8'), result[0])
+            if not match:
+                print("Contraseña incorrecta")
+            return match
+        else:
+            print("Usuario no encontrado")
+            return False
+
+
     def insert_diary_entry(self, user: str, diary_entry: dict):
         cursor = self.connection.cursor()
 
@@ -85,8 +112,7 @@ class AccessBD:
         if result:
             user_id = result[0]
         else:
-            cursor.execute("INSERT INTO users (username) VALUES (%s)", (user,))
-            user_id = cursor.lastrowid
+            print("Usuario no encontrado")
         
         # Insertar la entrada del diario
         cursor.execute("""
@@ -147,3 +173,4 @@ if __name__ == '__main__':
     entries = access_bd.get_diary_entries("user1")
     print(entries)
     access_bd.close()
+    

@@ -4,3 +4,4 @@ dotenv
 requests
 uvicorn
 mysql.connector
+bcrypt
