@@ -13,7 +13,7 @@ class AccessBD:
             database=os.getenv('DB_NAME')
         )
 
-    def list_to_json(self, entries: list) -> list:
+    def list_to_entris_json(self, entries: list) -> list:
         """Convertir la lista de entradas del diario a un formato JSON"""
         json_entries = []
         for entry in entries:
@@ -26,6 +26,25 @@ class AccessBD:
                     "Surprise": entry[4],
                     "Sad": entry[5],
                     "Fear": entry[6]
+                }
+            }
+            json_entries.append(json_entry)
+        return json_entries
+    
+    def list_to_chat_json(self, entries: list) -> list:
+        """Convertir la lista de entradas del diario a un formato JSON"""
+        json_entries = []
+        for entry in entries:
+            json_entry = {
+                "date": entry[0].strftime("%Y-%m-%d"),
+                "human_message": entry[1],
+                "bot_message": entry[2],
+                "emotions": {
+                    "Happy": entry[3],
+                    "Angry": entry[4],
+                    "Surprise": entry[5],
+                    "Sad": entry[6],
+                    "Fear": entry[7]
                 }
             }
             json_entries.append(json_entry)
@@ -57,13 +76,29 @@ class AccessBD:
         )
         """)
 
-        # Crear la tabla 'diary_entries' si no existe, con mejora en los tipos de datos de las emociones
+        # Crear la tabla 'diary_entries' si no existe
         cursor.execute("""
         CREATE TABLE IF NOT EXISTS diary_entries (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT,
             date DATE,
             entry TEXT,
+            happy TINYINT(1),
+            angry TINYINT(1),
+            surprise TINYINT(1),
+            sad TINYINT(1),
+            fear TINYINT(1),
+            FOREIGN KEY (user_id) REFERENCES users(id)
+        )
+        """)
+
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_history (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT,
+            date DATETIME,
+            human_message TEXT,
+            bot_message TEXT,
             happy TINYINT(1),
             angry TINYINT(1),
             surprise TINYINT(1),
@@ -141,8 +176,12 @@ class AccessBD:
         self.connection.commit()
         cursor.close()
 
-    def get_diary_entries(self, user: str) -> list:
-        """Obtener todas las entradas del diario de un usuario"""
+    def get_diary_entries(self, user: str, limit: int = None) -> list:
+        """
+        Obtener todas las entradas del diario de un usuario
+        :param user: Nombre de usuario
+        :param limit: Número de entradas a obtener. Si es None, se obtienen todas las entradas        
+        """
         cursor = self.connection.cursor()
 
         # Obtener el id del usuario
@@ -153,14 +192,92 @@ class AccessBD:
         else:
             return []
         
-        cursor.execute("""
+        if limit is None:
+            cursor.execute("""
                        SELECT date, entry, happy, angry, surprise, sad, fear
                        FROM diary_entries
                        WHERE user_id = %s
+                       ORDER BY date
                        """, (user_id,))
+        else:
+            cursor.execute("""
+                        SELECT *
+                        FROM (
+                            SELECT date, entry, happy, angry, surprise, sad, fear
+                            FROM diary_entries
+                            WHERE user_id = %s
+                            ORDER BY date DESC
+                            LIMIT %s
+                        ) subquery
+                        ORDER BY date ASC;
+                        """, (user_id, limit))
         entries = cursor.fetchall()
         cursor.close()
-        return self.list_to_json(entries)   
+        return self.list_to_entris_json(entries)
+
+    def insert_chat_history(self, user: str, chat_history: dict):
+        cursor = self.connection.cursor()
+
+        # Obtener el id del usuario
+        cursor.execute("SELECT id FROM users WHERE username = %s", (user,))
+        result = cursor.fetchone()
+        if result:
+            user_id = result[0]
+        else:
+            print("Usuario no encontrado")
+        
+        # Insertar el historial del chat
+        cursor.execute("""
+        INSERT INTO chat_history (user_id, date, human_message, bot_message, happy, angry, surprise, sad, fear)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (user_id, chat_history['date'], 
+              chat_history['human_message'], 
+              chat_history['bot_message'],
+              chat_history['emotions']['Happy'], 
+              chat_history['emotions']['Angry'], 
+              chat_history['emotions']['Surprise'], 
+              chat_history['emotions']['Sad'], 
+              chat_history['emotions']['Fear']))
+
+        # Guardar los cambios y cerrar el cursor
+        self.connection.commit()
+        cursor.close()
+
+    def get_chat_history(self, user: str, limit: int = None) -> list:
+        """Obtener todo el historial del chat de un usuario"""
+        cursor = self.connection.cursor()
+
+        # Obtener el id del usuario
+        cursor.execute("SELECT id FROM users WHERE username = %s", (user,))
+        result = cursor.fetchone()
+        if result:
+            user_id = result[0]
+        else:
+            return []
+        
+        if limit is None:
+        
+            cursor.execute("""
+                        SELECT date, human_message, bot_message, happy, angry, surprise, sad, fear
+                        FROM chat_history
+                        WHERE user_id = %s
+                        ORDER BY date
+                        """, (user_id,))
+        else:
+            cursor.execute("""
+                        SELECT *
+                        FROM (
+                            SELECT date, human_message, bot_message, happy, angry, surprise, sad, fear
+                            FROM chat_history
+                            WHERE user_id = %s
+                            ORDER BY date DESC
+                            LIMIT %s
+                        ) subquery
+                        ORDER BY date ASC;
+                        """, (user_id, limit))
+        entries = cursor.fetchall()
+        cursor.close()
+        return self.list_to_chat_json(entries)   
 
     def close(self):
         self.connection.close()
@@ -170,8 +287,8 @@ if __name__ == '__main__':
     access_bd.create_tables()
     """
     access_bd.insert_diary_entry("user1", {
-        "date": "2021-09-02",
-        "entry": "Hoy fue un día muy triste",
+        "date": "2021-09-03",
+        "entry": "Hoy fue un día muy xD",
         "emotions": {
             "Happy": 0,
             "Angry": 0,
@@ -181,7 +298,8 @@ if __name__ == '__main__':
         }
     })
     """
-    entries = access_bd.get_diary_entries("user1")
+
+    entries = access_bd.get_diary_entries("user1", 2)
     print(entries)
     access_bd.close()
     
