@@ -14,7 +14,7 @@ from access_bd import AccessBD
 
 load_dotenv()  # Carga las variables de entorno
 
-app = FastAPI()
+emotionai = FastAPI()
 
 db = AccessBD()
 
@@ -73,7 +73,7 @@ def list_of_dicts_to_entries_text(entries: list) -> str:
         text_entries += "\n"  # Línea vacía entre entradas
     return text_entries
 
-@app.get("/start_chat")
+@emotionai.get("/start_chat")
 async def start_chat(username : str = Query(...)):
     #Vamos a intentar recuperar la conversación de la base de datos
     #Tanto para que la vea el usuario como para que la IA pueda tener contexto
@@ -82,7 +82,7 @@ async def start_chat(username : str = Query(...)):
     conversation_list = db.get_chat_history(username, 10)
     return {"conversation": conversation_list}
 
-@app.post("/chat")
+@emotionai.post("/chat")
 async def chat(conversation: Conversation):
     if not conversation.messages:
         raise HTTPException(status_code=400, detail="No hay mensajes en la conversación")
@@ -204,7 +204,7 @@ def perfilar(username: str) -> dict:
 # ----------------------------------------------
 # Endpoint de Registro
 # ----------------------------------------------
-@app.post("/register")
+@emotionai.post("/register")
 async def register(user: UserAuth):
     user_exit = db.check_user(user.username)
     if user_exit:
@@ -215,7 +215,7 @@ async def register(user: UserAuth):
 # ----------------------------------------------
 # Endpoint de Login (verifica contraseña hasheada)
 # ----------------------------------------------
-@app.post("/login")
+@emotionai.post("/login")
 async def login(user: UserAuth):
     success = db.verify_user(user.username, user.password)
     if not success:
@@ -225,7 +225,7 @@ async def login(user: UserAuth):
 # ----------------------------------------------
 # Endpoint para agregar o actualizar la entrada del Diario
 # ----------------------------------------------
-@app.post("/diario")
+@emotionai.post("/diario")
 async def agregar_diario(entry: DiaryEntry):
     success = db.verify_user(entry.username, entry.password)
     if not success:
@@ -255,7 +255,7 @@ async def agregar_diario(entry: DiaryEntry):
 # ----------------------------------------------
 # Endpoint para obtener la entrada del Diario para un usuario (por fecha)
 # ----------------------------------------------
-@app.get("/diario")
+@emotionai.get("/diario")
 async def obtener_diario(username: str = Query(...), password: str = Query(...)):
     success = db.verify_user(username, password)
     if not success:
@@ -329,7 +329,7 @@ def calculate_big_five(username: str) -> dict:
 # ----------------------------------------------
 # Endpoint de Perfilado (incluye perfil emocional y Big Five)
 # ----------------------------------------------
-@app.get("/perfilado")
+@emotionai.get("/perfilado")
 async def perfilado(username: str = Query(...), password: str = Query(...)):
     success = db.verify_user(username, password)
     if not success:
@@ -352,7 +352,7 @@ async def perfilado(username: str = Query(...), password: str = Query(...)):
     return {"perfil": perfil_completo}
 
 
-@app.get("/Objetivo")
+@emotionai.get("/Objetivo")
 async def objetivo(username: str = Query(...), password: str = Query(...)):
     # Verificar credenciales del usuario
     success = db.verify_user(username, password)
@@ -407,4 +407,4 @@ async def objetivo(username: str = Query(...), password: str = Query(...)):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(emotionai, host="0.0.0.0", port=8000)
