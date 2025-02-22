@@ -324,4 +324,16 @@ else:
     
     elif service_option == "Objetivo":
         st.title("Objetivos Personales")
-        st.info("Sección en construcción. ¡Próximamente!")
+        st.write(f"Usuario: **{st.session_state.username}**")
+        
+        # Realizar la petición GET al endpoint /Objetivo
+        params = {"username": st.session_state.username, "password": st.session_state.password}
+        response = requests.get(f"{URL}/Objetivo", params=params)
+        
+        if response.ok:
+            data = response.json()
+            objetivo = data.get("objetivo", "No se obtuvo un objetivo.")
+            st.markdown("### Objetivos de Mejora")
+            st.write(objetivo)
+        else:
+            st.error("Error al obtener los objetivos. Verifica tus entradas en el diario o tus credenciales.")
