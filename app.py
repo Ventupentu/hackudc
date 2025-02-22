@@ -2,52 +2,52 @@
 import streamlit as st
 import requests
 
-st.title("Chatbot Emocional Integrado")
+# Menú lateral para seleccionar la sección
+st.sidebar.title("Menú Principal")
+page = st.sidebar.radio("Selecciona una opción:", ["Chatbot", "Diario", "Profiling", "Objetivo"])
 
-# --- Sección 1: Chatbot Conversacional ---
-st.header("Chatbot Conversacional")
-user_input = st.text_input("Escribe tu mensaje:")
-if st.button("Enviar mensaje"):
-    response = requests.post("http://localhost:8000/analizar", json={"texto": user_input})
-    if response.ok:
-        data = response.json()
-        st.write("Emociones detectadas:", data["emociones"])
-        st.write("Respuesta del chatbot:", data["respuesta"])
-    else:
-        st.error("Error al conectar con el servidor de análisis.")
+if page == "Chatbot":
+    st.title("Chatbot Emocional - Guía Psicológica")
+    
+    # Inicializar el historial de mensajes si aún no existe
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-# --- Sección 2: Diario Emocional ---
-st.header("Diario Emocional")
-diario_texto = st.text_area("Escribe tu entrada del diario:")
-if st.button("Agregar al diario"):
-    response = requests.post("http://localhost:8000/diario", json={"texto": diario_texto})
-    if response.ok:
-        data = response.json()
-        st.success("Entrada agregada al diario.")
-        st.json(data["registro"])
-    else:
-        st.error("Error al agregar la entrada al diario.")
+    def send_message():
+        user_input = st.session_state.user_input
+        if user_input:
+            # Añadir mensaje del usuario al historial
+            st.session_state.messages.append({"role": "user", "content": user_input})
+            # Construir el payload con la conversación completa
+            payload = {"messages": st.session_state.messages}
+            # Llamar al endpoint /chat
+            response = requests.post("http://localhost:8000/chat", json=payload)
+            if response.ok:
+                data = response.json()
+                assistant_response = data.get("respuesta", "No se obtuvo respuesta.")
+            else:
+                assistant_response = "Lo siento, hubo un error al procesar tu mensaje."
+            # Agregar respuesta del chatbot al historial
+            st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+            # El campo se limpia automáticamente con clear_on_submit
 
-# --- Sección 3: Perfil de Personalidad ---
-st.header("Perfil de Personalidad")
-if st.button("Obtener perfil"):
-    response = requests.get("http://localhost:8000/perfil")
-    if response.ok:
-        data = response.json()
-        st.write("Perfil emocional promedio:")
-        st.json(data["perfil_emocional"])
-        st.write("Sugerencia:", data["sugerencia"])
-    else:
-        st.error("Error al obtener el perfil. Asegúrate de tener entradas en el diario.")
+    # Formulario para enviar mensajes
+    with st.form(key="chat_form", clear_on_submit=True):
+        st.text_input("Ingresa tu estado emocional o mensaje", key="user_input")
+        submitted = st.form_submit_button("Enviar")
+        if submitted:
+            send_message()
 
-# --- Sección 4: Objetivos de Personalidad ---
-st.header("Objetivos de Personalidad")
-objetivo_input = st.text_input("Describe tu objetivo de personalidad:")
-if st.button("Establecer objetivo"):
-    response = requests.post("http://localhost:8000/objetivos", json={"descripcion": objetivo_input})
-    if response.ok:
-        data = response.json()
-        st.write("Objetivo:", data["objetivo"])
-        st.write("Recomendación:", data["recomendacion"])
-    else:
-        st.error("Error al establecer el objetivo.")
+    # Mostrar el historial de conversación
+    for msg in st.session_state.messages:
+        if msg["role"] == "user":
+            st.markdown(f"**Tú:** {msg['content']}")
+        else:
+            st.markdown(f"**Chatbot:** {msg['content']}")
+
+elif page == "Diario":
+    st.write("Sección de Diario - (Por implementar)")
+elif page == "Profiling":
+    st.write("Sección de Profiling - (Por implementar)")
+elif page == "Objetivo":
+    st.write("Sección de Objetivos - (Por implementar)")
