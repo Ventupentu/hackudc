@@ -1,6 +1,7 @@
 import os
 import nltk
 import text2emotion as te
+import re
 import json
 from datetime import datetime
 
@@ -36,7 +37,6 @@ class UserAuth(BaseModel):
     username: str
     password: str
 
-# Se agrega el campo opcional "fecha" (formato "YYYY-MM-DD") y "editar" para distinguir la acción.
 class DiaryEntry(BaseModel):
     username: str
     password: str
@@ -59,21 +59,18 @@ def call_mistral_rag(conversation_messages: list[dict]) -> str:
     return chat_response.choices[0].message.content
 
 def list_of_dicts_to_entries_text(entries: list) -> str:
-    """Convertir la lista de diccionarios de entradas del diario a un texto estructurado"""
+    """Convierte la lista de entradas del diario en un texto estructurado"""
     text_entries = ""
     for entry in entries:
-        # Asumimos que cada entry es un diccionario con "date", "entry", y "emotions"
         date = entry["date"]
         text = entry["entry"]
         emotions = entry["emotions"]
-        
         text_entries += f"Fecha: {date}\n"
         text_entries += f"Entrada: {text}\n"
-        text_entries += f"Emociones:\n"
+        text_entries += "Emociones:\n"
         for emotion, value in emotions.items():
             text_entries += f"- {emotion}: {value}\n"
-        text_entries += "\n"  # Añadir una línea vacía entre las entradas
-    
+        text_entries += "\n"  # Línea vacía entre entradas
     return text_entries
 
 @app.post("/chat")
@@ -89,56 +86,48 @@ async def chat(conversation: Conversation):
     emociones = {}
     if last_message.role == "user":
         emociones = te.get_emotion(last_message.content)
-
-    # Determinar la emoción dominante
     emocion_dominante = max(emociones, key=emociones.get, default="neutral")
 
-    # Crear un perfil emocional simple
+    # Crear un perfil emocional simple a partir del diario
     perfil = perfilar(username)
     print(f"Perfil emocional: {perfil}")
 
     # Crear un mensaje adicional para orientar a la IA
     mensaje_emocional = {
         "role": "system",
-        "content": f"Eres un chatbot emocional orientado a apoyar al usuario. El usuario de nombre {username} parece estar sintiendo. '{emocion_dominante}' en su último mensaje. Ajusta tu respuesta para ser apropiada a esta emoción. Ten en cuenta esta característica del usuario: '{perfil}'."
+        "content": f"Eres un chatbot emocional orientado a apoyar al usuario. El usuario de nombre {username} parece estar sintiendo '{emocion_dominante}' en su último mensaje. Ajusta tu respuesta para ser apropiada a esta emoción. Ten en cuenta esta característica del usuario: '{perfil}'."
     } 
-
-    print(mensaje_emocional["content"])
 
     # Insertar el mensaje de emoción al historial
     conversation_list.insert(0, mensaje_emocional)
 
     # Llamar a la API de Mistral con el historial actualizado
     respuesta = call_mistral_rag(conversation_list)
-
     return {"respuesta": respuesta, "emociones": emociones}
 
 def perfilar(username: str) -> dict:
-    """Obtenemos el perfil emocional del usuario a partir de su historial de diario."""
-    # Obtener las entradas del diario del usuario
+    """Obtiene el perfil emocional del usuario a partir de su historial de diario."""
     diary_entries = db.get_diary_entries(username)
     if not diary_entries:
         raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
         
+    # Usamos claves con mayúscula inicial, ya que se almacenan así en la BD
     perfil = {"Happy": 0, "Sad": 0, "Angry": 0, "Surprise": 0, "Fear": 0}
     count = 0
     for entry_data in diary_entries:
-        emociones = entry_data.get("emociones", {})
+        emociones = entry_data.get("emotions", {})  # Asumir que el campo se llama "emotions"
         for emo in perfil.keys():
-            perfil[emo] += float(emociones.get(emo, float(0)))  
+            perfil[emo] += float(emociones.get(emo, 0))
         count += 1
 
     if count == 0:
         return {"perfil_emocional": {}, "sugerencia": "No hay datos suficientes"}
 
-    # Normalizar valores dividiendo entre count
+    # Normalizar valores
     for emo in perfil:
         perfil[emo] /= count
 
-    # Determinar la emoción dominante
     emocion_dominante = max(perfil, key=perfil.get)
-    
-    # Determinar la personalidad basada en la emoción más alta
     sugerencia = {
         "Happy": "Tendencia a la felicidad",
         "Sad": "Tendencia a la melancolía",
@@ -179,14 +168,12 @@ async def agregar_diario(entry: DiaryEntry):
     if not success:
         raise HTTPException(status_code=400, detail="Credenciales inválidas")
     
-    # Usar la fecha proporcionada o, si es None, la fecha actual
     target_date = entry.fecha if entry.fecha is not None else datetime.now().strftime("%Y-%m-%d")
     entry_for_date = db.get_diary_entry(entry.username, target_date)
 
     if entry.editar:
         if entry_for_date is None:
             raise HTTPException(status_code=400, detail="No existe una entrada previa para editar en esta fecha")
-        # Modo edición: sobrescribir la entrada existente
         new_text = entry.entry
         new_emotions = te.get_emotion(new_text)
         entry_for_date["entry"] = new_text
@@ -216,160 +203,90 @@ async def obtener_diario(username: str = Query(...), password: str = Query(...))
     return {"diario": diary}
 
 # ----------------------------------------------
-# Endpoint para Profiling basado en el historial del Diario
+# Función para calcular los rasgos Big Five a partir de los diarios
 # ----------------------------------------------
-import plotly.graph_objects as go
-
-@app.get("/profiling")
-async def obtener_profiling(username: str = Query(...), password: str = Query(...)):
+def calculate_big_five(username: str) -> dict:
     diary_entries = db.get_diary_entries(username)
     if not diary_entries:
         raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
     
-    from datetime import datetime
-    now = datetime.now()
-    weighted_emotions = {"Happy": 0.0, "Sad": 0.0, "Angry": 0.0, "Surprise": 0.0, "Fear": 0.0}
-    total_weight = 0.0
+    # Convertir las entradas del diario a un texto estructurado
+    text_context = list_of_dicts_to_entries_text(diary_entries)
     
-    for entry in diary_entries:
-        try:
-            ts = datetime.fromisoformat(entry["date"])
-        except Exception:
-            continue
-        days_diff = (now - ts).days
-        weight = 1 / (1 + days_diff/7)
-        for emo in weighted_emotions:
-            weighted_emotions[emo] += entry.get("emociones", {}).get(emo, 0) * weight
-        total_weight += weight
+    # Definir el prompt para extraer los rasgos de personalidad (Big Five)
+    prompt = f"""
+    Analyze the following diary entries and evaluate the user's personality according to the Big Five traits.
+
+    The traits are:
+    - Openness
+    - Conscientiousness
+    - Extraversion
+    - Agreeableness
+    - Neuroticism
+
+    For each trait, provide a value between 0 and 100 (where 100 means extremely high). 
+    Only respond with valid JSON in the following format:
+
+    {{
+    "Openness": <number>,
+    "Conscientiousness": <number>,
+    "Extraversion": <number>,
+    "Agreeableness": <number>,
+    "Neuroticism": <number>
+    }}
+
+    Diary Entries:
+    {text_context}
+    """
+
     
-    if total_weight == 0:
-        raise HTTPException(status_code=404, detail="No se pudieron calcular los perfiles")
+    # Llamar al modelo para obtener la evaluación
+    big_five_response = call_mistral_rag([{"role": "system", "content": prompt}])
     
-    average_emotions = {k: v / total_weight for k, v in weighted_emotions.items()}
 
-    #Ponderación de emociones (esto puede ajustarse)
-    emotion_weights = {
-        "Sad": 0.3,   # A mayor tristeza, mayor neuroticismo
-        "Fear": 0.3,  # A mayor miedo, mayor neuroticismo
-        "Angry": 0.4, # A mayor ira, mayor neuroticismo
-        "Happy": 0.3, # Felicidad se asocia con extraversión y amabilidad
-        "Surprise": 0.4 # Sorpresa también se asocia con extraversión
-    }
+    # Remove markdown code fences if present
+    clean_response = re.sub(r"^```(?:json)?\s*", "", big_five_response)
+    clean_response = re.sub(r"\s*```$", "", clean_response)
+
+    print("Big Five response:", clean_response)
     
-    neuroticism = (average_emotions["Sad"] * emotion_weights["Sad"] + 
-                average_emotions["Fear"] * emotion_weights["Fear"] + 
-                average_emotions["Angry"] * emotion_weights["Angry"]) / (emotion_weights["Sad"] + emotion_weights["Fear"] + emotion_weights["Angry"])
-
-    extraversion = (average_emotions["Happy"] * emotion_weights["Happy"] + 
-                    average_emotions["Surprise"] * emotion_weights["Surprise"]) / (emotion_weights["Happy"] + emotion_weights["Surprise"])
-
-    agreeableness = (average_emotions["Happy"] * 0.5 + (1 - average_emotions["Angry"]) * 0.5)  # Menos ira y más felicidad da mayor amabilidad
-
-    # Openness y Conscientiousness basados en el contenido del diario y emociones
-    # Si hay mucha sorpresa o emoción positiva, puede aumentar el Openness
-    openness = min(1.0, (average_emotions["Surprise"] + average_emotions["Happy"]) / 2)  # Valores entre 0 y 1
-
-    # Conscientiousness basado en la organización de las emociones (menos emociones caóticas)
-    conscientiousness = max(0.2, 1 - (average_emotions["Angry"] + average_emotions["Fear"]) / 2)  # Si las emociones son más negativas, la consciencia es baja
-
-    # Formato final del Big Five
-    big_five = {
-        "Neuroticism": round(neuroticism, 2),
-        "Extraversion": round(extraversion, 2),
-        "Agreeableness": round(agreeableness, 2),
-        "Openness": round(openness, 2),
-        "Conscientiousness": round(conscientiousness, 2),
-    }
+    try:
+        big_five = json.loads(clean_response)
+    except Exception as e:
+        big_five = {
+            "Openness": 0,
+            "Conscientiousness": 0,
+            "Extraversion": 0,
+            "Agreeableness": 0,
+            "Neuroticism": 0
+        }
+        print("me hago caca")
     
-#    if average_emotions["Angry"] > 0.6:
- #       eneagrama = "Tipo 8: El Desafiador"
-  #  elif average_emotions["Sad"] > 0.6:
-   #     eneagrama = "Tipo 4: El Individualista"
-    #elif average_emotions["Happy"] > 0.6:
-#        eneagrama = "Tipo 7: El Entusiasta"
- #   elif average_emotions["Fear"] > 0.6:
-  #      eneagrama = "Tipo 6: El Leal"
-   # elif average_emotions["Surprise"] > 0.6:
-    #    eneagrama = "Tipo 3: El Triunfador"
-#    elif average_emotions["Angry"] < 0.2 and average_emotions["Sad"] < 0.2 and average_emotions["Fear"] < 0.2:
- #       eneagrama = "Tipo 9: El Pacificador"
-  #  elif average_emotions["Happy"] > 0.5 and average_emotions["Sad"] < 0.4 and average_emotions["Fear"] < 0.4:
-   #     eneagrama = "Tipo 2: El Ayudador"
-    #elif average_emotions["Sad"] > 0.5 and average_emotions["Happy"] < 0.4:
-#        eneagrama = "Tipo 4: El Individualista"
- #   elif average_emotions["Surprise"] > 0.4 and average_emotions["Angry"] < 0.3:
-  #      eneagrama = "Tipo 3: El Triunfador"
-   # else:
+    return big_five
 
-    # Usar este formato legible con una lista de diccionarios
-    entries_text = list_of_dicts_to_entries_text(diary_entries)
-
-    # Ahora pasar esta cadena al LLM
-    eneagrama = call_mistral_rag([{
-        "role": "system",
-        "content": f"Determina el tipo de eneagrama basado en las siguientes emociones y textos del diario:\n{entries_text}. Sé escueto y preciso y lo primero que debes de decir es el tipo de eneagrama"
-    }])
-
-    # --- Generación del gráfico Radar para Big Five ---
-    dimensions = list(big_five.keys())
-    scores = list(big_five.values())
-    # Cerrar el polígono
-    dimensions.append(dimensions[0])
-    scores.append(scores[0])
-    
-    radar_fig = go.Figure(
-        data=[
-            go.Scatterpolar(r=scores, theta=dimensions, fill='toself', name='Big Five')
-        ],
-        layout=go.Layout(
-            polar=dict(
-                radialaxis=dict(visible=True, range=[0, 1])
-            ),
-            showlegend=False,
-            title="Perfil Big Five"
-        )
-    )
-    
-    # --- Generación del gráfico de Barras para emociones promedio ---
-    bar_fig = go.Figure(
-        data=[
-            go.Bar(x=list(average_emotions.keys()), y=[round(v, 2) for v in average_emotions.values()])
-        ],
-        layout=go.Layout(
-            title="Emociones Promedio",
-            xaxis_title="Emoción",
-            yaxis_title="Valor",
-            yaxis=dict(range=[0,1])
-        )
-    )
-    
-    # Convertir las figuras a JSON para enviarlas al cliente
-    return {
-        "big_five": big_five,
-        "eneagrama": eneagrama,
-        "average_emotions": average_emotions,
-        "radar_chart": radar_fig.to_json(),
-        "bar_chart": bar_fig.to_json()
-    }
-
-@app.get("/Objetivo")
-async def objetivo(username: str = Query(...), password: str = Query(...)):
+# ----------------------------------------------
+# Endpoint de Perfilado (incluye perfil emocional y Big Five)
+# ----------------------------------------------
+@app.get("/perfilado")
+async def perfilado(username: str = Query(...), password: str = Query(...)):
     success = db.verify_user(username, password)
     if not success:
         raise HTTPException(status_code=400, detail="Credenciales inválidas")
-
-    prompt = "Genera unicamente una lista en de objetivos de mejora basados en la siguiente información. SOLO haz objetivos si el usuario muestra CLARAMENTE que quiere mejorar en algo o cambiar "
-    diary_entries = db.get_diary_entries(username)
-    if not diary_entries:
-        raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
-
-    entries_text = list_of_dicts_to_entries_text(diary_entries)
-    objetivo = call_mistral_rag([{
-        "role": "system",
-        "content": f"{prompt}\n{entries_text}"
-    }])
-
-    return {"objetivo": objetivo}
+    
+    # Obtener perfil emocional
+    perfil_emocional_data = perfilar(username)
+    
+    # Calcular rasgos Big Five
+    big_five = calculate_big_five(username)
+    
+    # Combinar ambos perfiles en la respuesta
+    perfil_completo = {
+        "perfil_emocional": perfil_emocional_data.get("perfil_emocional", {}),
+        "sugerencia": perfil_emocional_data.get("sugerencia", ""),
+        "big_five": big_five
+    }
+    
+    return {"perfil": perfil_completo}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

@@ -35,7 +35,7 @@ st.markdown(
         padding: 8px;
         font-size: 16px;
     }
-    /* Estilos para el Chat (similar a ChatGPT) */
+    /* Estilos para el Chat */
     .chat-container {
         margin: 20px 0;
     }
@@ -223,7 +223,6 @@ else:
         else:
             st.error("Error al obtener las entradas del diario.")
         
-        # Agrupar entradas por fecha
         diary_by_date = {}
         for entry in diary_entries:
             day = entry["date"][:10]
@@ -247,7 +246,6 @@ else:
         else:
             st.info("No hay entradas para este día.")
         
-        # Botón para activar el modo edición
         if entries:
             if st.button("Editar entrada", key="edit_button"):
                 st.session_state.diary_text = entries[0]["entry"]
@@ -270,7 +268,6 @@ else:
                     "fecha": selected_date_str,
                     "editar": st.session_state.edit_mode
                 }
-                
                 response = requests.post(f"{URL}/diario", json=payload)
                 if response.ok:
                     st.success("¡Entrada actualizada y sobreescrita!")
@@ -280,49 +277,11 @@ else:
                 else:
                     st.error("Error al actualizar la entrada.")
     
-    elif service_option == "Profiling":
-        st.title("Perfil de Personalidad")
-        params = {"username": st.session_state.username, "password": st.session_state.password}
-        response = requests.get(f"{URL}/profiling", params=params)
-        if response.ok:
-            data = response.json()
-            big_five = data.get("big_five", {})
-            eneagrama = data.get("eneagrama", "No disponible")
-            average_emotions = data.get("average_emotions", {})
-            
-            st.subheader("Modelo Big Five")
-            for dimension, score in big_five.items():
-                st.write(f"**{dimension}:** {score}")
-            
-            import json
-            import plotly.graph_objects as go
-            radar_chart_json = data.get("radar_chart")
-            if radar_chart_json:
-                radar_fig = go.Figure(json.loads(radar_chart_json))
-                st.plotly_chart(radar_fig)
-            
-            st.subheader("Clasificación Eneagrama")
-            st.write(eneagrama)
-            
-            st.subheader("Emociones Promedio (ponderadas por recencia)")
-            for emo, value in average_emotions.items():
-                st.write(f"**{emo}:** {round(value, 2)}")
-            
-            bar_chart_json = data.get("bar_chart")
-            if bar_chart_json:
-                bar_fig = go.Figure(json.loads(bar_chart_json))
-                st.plotly_chart(bar_fig)
-        else:
-            st.error("Error al obtener el perfil. Asegúrate de tener entradas en el diario.")
-    
     elif service_option == "Objetivo":
         st.title("Objetivos Personales")
         st.write(f"Usuario: **{st.session_state.username}**")
-        
-        # Realizar la petición GET al endpoint /Objetivo
         params = {"username": st.session_state.username, "password": st.session_state.password}
         response = requests.get(f"{URL}/Objetivo", params=params)
-        
         if response.ok:
             data = response.json()
             objetivo = data.get("objetivo", "No se obtuvo un objetivo.")
@@ -330,3 +289,73 @@ else:
             st.write(objetivo)
         else:
             st.error("Error al obtener los objetivos. Verifica tus entradas en el diario o tus credenciales.")
+    
+    elif service_option == "Profiling":
+        st.title("Perfil de Personalidad")
+        st.write(f"Usuario: **{st.session_state.username}**")
+        params = {"username": st.session_state.username, "password": st.session_state.password}
+        response = requests.get(f"{URL}/perfilado", params=params)
+        if response.ok:
+            data = response.json()
+            perfil = data.get("perfil", {})
+            st.markdown("### Perfil Emocional y Big Five")
+            #st.json(perfil)
+            # Mostrar perfil emocional en gráfico de barras
+            perfil_emocional = perfil.get("perfil_emocional", {})
+            sugerencia = perfil.get("sugerencia", "Sin sugerencia")
+            if perfil_emocional:
+                import pandas as pd
+                df = pd.DataFrame({
+                    "Emoción": list(perfil_emocional.keys()),
+                    "Valor": list(perfil_emocional.values())
+                })
+                import plotly.express as px
+                fig_bar = px.bar(
+                    df, 
+                    x="Emoción", 
+                    y="Valor", 
+                    title="Estadísticas Emocionales",
+                    labels={"Valor": "Valor Promedio", "Emoción": "Emoción"}
+                )
+                st.plotly_chart(fig_bar)
+                st.markdown(f"**Sugerencia:** {sugerencia}")
+            else:
+                st.info("No se encontraron datos en el perfil emocional.")
+            
+            # Mostrar gráfico radar de los Big Five
+            big_five = perfil.get("big_five", None)
+            if not big_five:
+                big_five = {
+                    "Openness": 70,
+                    "Conscientiousness": 65,
+                    "Extraversion": 60,
+                    "Agreeableness": 75,
+                    "Neuroticism": 40
+                }
+            import plotly.graph_objects as go
+            categories = list(big_five.keys())
+            values = list(big_five.values())
+            # Para cerrar el gráfico radar, se repite el primer elemento
+            values += values[:1]
+            categories += categories[:1]
+            fig_radar = go.Figure(
+                data=go.Scatterpolar(
+                    r=values,
+                    theta=categories,
+                    fill="toself",
+                    name="Big Five"
+                )
+            )
+            fig_radar.update_layout(
+                polar=dict(
+                    radialaxis=dict(
+                        visible=True,
+                        range=[0, 100]
+                    )
+                ),
+                showlegend=False,
+                title="Perfil Big Five"
+            )
+            st.plotly_chart(fig_radar)
+        else:
+            st.error("Error al obtener el perfil. Verifica tus entradas en el diario o tus credenciales.")
