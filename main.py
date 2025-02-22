@@ -82,7 +82,7 @@ async def chat(conversation: Conversation):
         raise HTTPException(status_code=400, detail="No hay mensajes en la conversación")
     username = conversation.username
     # Convertir mensajes a diccionarios
-    conversation_list = [msg.dump() for msg in conversation.messages]
+    conversation_list = [msg.dict() for msg in conversation.messages]
 
     # Analizar emociones del último mensaje del usuario
     last_message = conversation.messages[-1]

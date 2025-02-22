@@ -117,6 +117,19 @@ if "edit_mode" not in st.session_state:
 
 URL = "http://localhost:8000"
 
+def send_message():
+    user_input = st.session_state.get("user_input", "")
+    if user_input:
+        st.session_state.messages.append({"role": "user", "content": user_input})
+        payload = {"messages": st.session_state.messages, "username": st.session_state.username}
+        response = requests.post(f"{URL}/chat", json=payload)
+        if response.ok:
+            data = response.json()
+            assistant_response = data.get("respuesta", "No se obtuvo respuesta.")
+        else:
+            assistant_response = "Error al procesar tu mensaje."
+        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+
 # Página Home (sin autenticación)
 if not st.session_state.logged_in:
     st.title("Bienvenido a Tu Espacio Emocional")
@@ -190,21 +203,14 @@ else:
                         """, unsafe_allow_html=True
                     )
         input_container = st.container()
-        with st.form(key="chat_form", clear_on_submit=True):
-            st.text_input("Ingresa tu mensaje", key="user_input", placeholder="Escribe aquí tu mensaje...")
-            submitted = st.form_submit_button("Enviar")
-            if submitted:
-                payload = {"messages": st.session_state.messages}
-                response = requests.post(f"{URL}/chat", json=payload)
-                if response.ok:
-                    data = response.json()
-                    assistant_response = data.get("respuesta", "No se obtuvo respuesta.")
-                else:
-                    assistant_response = "Error al procesar tu mensaje."
-                st.session_state.messages.append({"role": "user", "content": st.session_state.user_input})
-                st.session_state.messages.append({"role": "assistant", "content": assistant_response})
-                st.rerun()
-    
+        with input_container:
+            with st.form(key="chat_form", clear_on_submit=True):
+                st.text_input("Ingresa tu mensaje", key="user_input", placeholder="Escribe aquí tu mensaje...")
+                submitted = st.form_submit_button("Enviar")
+                if submitted:
+                    send_message()
+                    st.rerun()
+                    
     elif service_option == "Diario":
         st.title("Diario Emocional")
         st.write(f"Usuario: **{st.session_state.username}**")
