@@ -58,6 +58,24 @@ def call_mistral_rag(conversation_messages: list[dict]) -> str:
     )
     return chat_response.choices[0].message.content
 
+def list_of_dicts_to_entries_text(entries: list) -> str:
+    """Convertir la lista de diccionarios de entradas del diario a un texto estructurado"""
+    text_entries = ""
+    for entry in entries:
+        # Asumimos que cada entry es un diccionario con "date", "entry", y "emotions"
+        date = entry["date"]
+        text = entry["entry"]
+        emotions = entry["emotions"]
+        
+        text_entries += f"Fecha: {date}\n"
+        text_entries += f"Entrada: {text}\n"
+        text_entries += f"Emociones:\n"
+        for emotion, value in emotions.items():
+            text_entries += f"- {emotion}: {value}\n"
+        text_entries += "\n"  # Añadir una línea vacía entre las entradas
+    
+    return text_entries
+
 @app.post("/chat")
 async def chat(conversation: Conversation):
     if not conversation.messages:
@@ -277,23 +295,6 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
  #   elif average_emotions["Surprise"] > 0.4 and average_emotions["Angry"] < 0.3:
   #      eneagrama = "Tipo 3: El Triunfador"
    # else:
-    def list_of_dicts_to_entries_text(entries: list) -> str:
-        """Convertir la lista de diccionarios de entradas del diario a un texto estructurado"""
-        text_entries = ""
-        for entry in entries:
-            # Asumimos que cada entry es un diccionario con "date", "entry", y "emotions"
-            date = entry["date"]
-            text = entry["entry"]
-            emotions = entry["emotions"]
-            
-            text_entries += f"Fecha: {date}\n"
-            text_entries += f"Entrada: {text}\n"
-            text_entries += f"Emociones:\n"
-            for emotion, value in emotions.items():
-                text_entries += f"- {emotion}: {value}\n"
-            text_entries += "\n"  # Añadir una línea vacía entre las entradas
-        
-        return text_entries
 
     # Usar este formato legible con una lista de diccionarios
     entries_text = list_of_dicts_to_entries_text(diary_entries)
@@ -301,7 +302,7 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
     # Ahora pasar esta cadena al LLM
     eneagrama = call_mistral_rag([{
         "role": "system",
-        "content": f"Determina el tipo de eneagrama basado en las siguientes emociones y textos del diario:\n{entries_text}"
+        "content": f"Determina el tipo de eneagrama basado en las siguientes emociones y textos del diario:\n{entries_text}. Sé escueto y preciso y lo primero que debes de decir es el tipo de eneagrama"
     }])
 
     # --- Generación del gráfico Radar para Big Five ---
@@ -345,6 +346,25 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
         "radar_chart": radar_fig.to_json(),
         "bar_chart": bar_fig.to_json()
     }
+
+@app.get("/Objetivo")
+async def objetivo(username: str = Query(...), password: str = Query(...)):
+    success = db.verify_user(username, password)
+    if not success:
+        raise HTTPException(status_code=400, detail="Credenciales inválidas")
+
+    prompt = "Genera unicamente una lista en de objetivos de mejora basados en la siguiente información. SOLO haz objetivos si el usuario muestra CLARAMENTE que quiere mejorar en algo o cambiar "
+    diary_entries = db.get_diary_entries(username)
+    if not diary_entries:
+        raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
+
+    entries_text = list_of_dicts_to_entries_text(diary_entries)
+    objetivo = call_mistral_rag([{
+        "role": "system",
+        "content": f"{prompt}\n{entries_text}"
+    }])
+
+    return {"objetivo": objetivo}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
