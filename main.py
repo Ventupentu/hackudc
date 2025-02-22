@@ -14,7 +14,7 @@ from access_bd import AccessBD
 
 load_dotenv()  # Carga las variables de entorno
 
-app = FastAPI()
+emotionai = FastAPI()
 
 db = AccessBD()
 
@@ -73,20 +73,7 @@ def list_of_dicts_to_entries_text(entries: list) -> str:
         text_entries += "\n"  # Línea vacía entre entradas
     return text_entries
 
-@app.get("/start_chat")
-async def start_chat(username : str = Query(...)):
-    #Vamos a intentar recuperar la conversación de la base de datos
-    #Tanto para que la vea el usuario como para que la IA pueda tener contexto
-    #Un máximo de diez mensajes, para no saturar la API de Mistral
-    # 10 del usuario, 10 de la IA
-    conversation_list = db.get_chat_history(username, 10)
-    print("------------------------------------------------")
-    print("conversación recuperada:", conversation_list)
-    print("----------------------------------------------------")
-    return {"conversacion": conversation_list}
-    
-
-@app.post("/chat")
+@emotionai.post("/chat")
 async def chat(conversation: Conversation):
     if not conversation.messages:
         raise HTTPException(status_code=400, detail="No hay mensajes en la conversación")
@@ -209,7 +196,7 @@ def perfilar(username: str) -> dict:
 # ----------------------------------------------
 # Endpoint de Registro
 # ----------------------------------------------
-@app.post("/register")
+@emotionai.post("/register")
 async def register(user: UserAuth):
     user_exit = db.check_user(user.username)
     if user_exit:
@@ -220,7 +207,7 @@ async def register(user: UserAuth):
 # ----------------------------------------------
 # Endpoint de Login (verifica contraseña hasheada)
 # ----------------------------------------------
-@app.post("/login")
+@emotionai.post("/login")
 async def login(user: UserAuth):
     success = db.verify_user(user.username, user.password)
     if not success:
@@ -230,7 +217,7 @@ async def login(user: UserAuth):
 # ----------------------------------------------
 # Endpoint para agregar o actualizar la entrada del Diario
 # ----------------------------------------------
-@app.post("/diario")
+@emotionai.post("/diario")
 async def agregar_diario(entry: DiaryEntry):
     success = db.verify_user(entry.username, entry.password)
     if not success:
@@ -260,7 +247,7 @@ async def agregar_diario(entry: DiaryEntry):
 # ----------------------------------------------
 # Endpoint para obtener la entrada del Diario para un usuario (por fecha)
 # ----------------------------------------------
-@app.get("/diario")
+@emotionai.get("/diario")
 async def obtener_diario(username: str = Query(...), password: str = Query(...)):
     success = db.verify_user(username, password)
     if not success:
@@ -334,7 +321,7 @@ def calculate_big_five(username: str) -> dict:
 # ----------------------------------------------
 # Endpoint de Perfilado (incluye perfil emocional y Big Five)
 # ----------------------------------------------
-@app.get("/perfilado")
+@emotionai.get("/perfilado")
 async def perfilado(username: str = Query(...), password: str = Query(...)):
     success = db.verify_user(username, password)
     if not success:
@@ -356,5 +343,60 @@ async def perfilado(username: str = Query(...), password: str = Query(...)):
     
     return {"perfil": perfil_completo}
 
+
+@emotionai.get("/Objetivo")
+async def objetivo(username: str = Query(...), password: str = Query(...)):
+    # Verificar credenciales del usuario
+    success = db.verify_user(username, password)
+    if not success:
+        raise HTTPException(status_code=400, detail="Credenciales inválidas")
+    
+    # Obtener entradas del diario del usuario
+    diary_entries = db.get_diary_entries(username)
+    if not diary_entries:
+        raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
+    
+    # Convertir las entradas en un texto estructurado
+    entries_text = list_of_dicts_to_entries_text(diary_entries)
+    
+    # Definir el prompt para generar objetivos personalizados
+    prompt = f"""
+    Analiza los siguientes textos del diario y las emociones detectadas en ellos. A partir de ello, propone una lista de objetivos personalizados que el usuario podría plantearse para mejorar su estado emocional.
+    
+    Ejemplos:
+    - "Soy una persona inestable emocionalmente y quiero reducir mi neuroticismo."
+    - "Soy una persona introvertida y quiero aumentar mi extraversión."
+    
+    Debes responder siempre en formato JSON EXACTAMENTE como se indica, sin ningún comentario adicional:
+    
+    {{
+      "objetivos": [
+          "<Objetivo 1>",
+          "<Objetivo 2>",
+          "...",
+          "<Objetivo 5>"
+      ]
+    }}
+    
+    Utiliza la siguiente información:
+    {entries_text}
+    """
+    
+    # Llamar al modelo para obtener los objetivos
+    respuesta_objetivo = call_mistral_rag([{"role": "system", "content": prompt}])
+    
+    # Eliminar posibles delimitadores markdown (por ejemplo, ```json ... ```)
+    clean_response = re.sub(r"^```(?:json)?\s*", "", respuesta_objetivo).strip()
+    clean_response = re.sub(r"\s*```$", "", clean_response)
+    
+    try:
+        objetivos = json.loads(clean_response)
+    except Exception as e:
+        print("Error parsing JSON in /Objetivo:", e)
+        objetivos = {"objetivos": []}
+    
+    return {"objetivo": objetivos}
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(emotionai, host="0.0.0.0", port=8000)

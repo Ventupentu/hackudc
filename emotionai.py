@@ -15,19 +15,6 @@ st.markdown(
         background: linear-gradient(135deg, #2c3e50, #4ca1af);
         color: white;
     }
-    /* Botones */
-    div.stButton > button {
-        background-color: #4CAF50;
-        color: white;
-        border: none;
-        padding: 10px 20px;
-        border-radius: 8px;
-        font-size: 16px;
-        font-weight: 600;
-    }
-    div.stButton > button:hover {
-        background-color: #45a049;
-    }
     /* Inputs y textareas */
     input, textarea {
         border: 2px solid #ccc;
@@ -101,6 +88,10 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
+
+
+
+
 # Inicializar variables de sesión
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -137,7 +128,7 @@ def send_message():
 
 # Página Home (sin autenticación)
 if not st.session_state.logged_in:
-    st.title("Bienvenido a Tu Espacio Emocional")
+    st.title("Bienvenido a EmotionAI, tu asistente emocional")
     st.write("Regístrate o inicia sesión para acceder a nuestros servicios personalizados.")
     
     auth_option = st.radio("Selecciona una opción:", ["Iniciar Sesión", "Registrarse"])
@@ -295,17 +286,20 @@ else:
                     st.error("Error al actualizar la entrada.")
     
     elif service_option == "Objetivo":
-        st.title("Objetivos Personales")
-        st.write(f"Usuario: **{st.session_state.username}**")
         params = {"username": st.session_state.username, "password": st.session_state.password}
         response = requests.get(f"{URL}/Objetivo", params=params)
         if response.ok:
             data = response.json()
-            objetivo = data.get("objetivo", "No se obtuvo un objetivo.")
+            objetivos = data.get("objetivo", {"objetivos": []})
             st.markdown("### Objetivos de Mejora")
-            st.write(objetivo)
+            if objetivos["objetivos"]:
+                for objetivo in objetivos["objetivos"]:
+                    st.markdown(f"- {objetivo}")
+            else:
+                st.info("No se han generado objetivos personalizados.")
         else:
             st.error("Error al obtener los objetivos. Verifica tus entradas en el diario o tus credenciales.")
+
     
     elif service_option == "Profiling":
         st.title("Perfil de Personalidad")
