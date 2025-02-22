@@ -1,0 +1,5 @@
+Para lanzar el main.py: uvicorn main:app --reload
+
+Para lanzar el app.py: streamlit run app.py
+
+Entrar al localhost del app.py para probar el chatbot
