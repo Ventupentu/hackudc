@@ -22,7 +22,7 @@ class AccessBD:
         for entry in entries:
             json_entry = {
                 "date": entry[0].strftime("%Y-%m-%d"),
-                "text": entry[1],
+                "entry": entry[1],
                 "emotions": {
                     "Happy": entry[2],
                     "Angry": entry[3],
@@ -183,7 +183,7 @@ class AccessBD:
         sad = VALUES(sad),
         fear = VALUES(fear)
         """, (user_id, diary_entry['date'], 
-              diary_entry['text'], 
+              diary_entry['entry'], 
               diary_entry['emotions']['Happy'], 
               diary_entry['emotions']['Angry'], 
               diary_entry['emotions']['Surprise'], 
@@ -342,7 +342,7 @@ if __name__ == '__main__':
     """
     access_bd.insert_diary_entry("user1", {
         "date": "2021-09-03",
-        "text": "Hoy fue un día muy xD aaa",
+        "entry": "Hoy fue un día muy xD aaa",
         "emotions": {
             "Happy": 0,
             "Angry": 0,
