@@ -3,3 +3,4 @@ text2emotion
 dotenv
 requests
 uvicorn
+mysql.connector
