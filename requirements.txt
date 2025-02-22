@@ -1,0 +1,5 @@
+fastapi
+text2emotion
+dotenv
+requests
+uvicorn
