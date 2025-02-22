@@ -114,21 +114,8 @@ if "diary_text" not in st.session_state:
     st.session_state.diary_text = ""
 if "edit_mode" not in st.session_state:
     st.session_state.edit_mode = False
-URL = "https://hackudc.onrender.com"
-#URL = "http://localhost:8000"
 
-def send_message():
-    user_input = st.session_state.get("user_input", "")
-    if user_input:
-        st.session_state.messages.append({"role": "user", "content": user_input})
-        payload = {"messages": st.session_state.messages, "username": st.session_state.username}
-        response = requests.post(f"{URL}/chat", json=payload)
-        if response.ok:
-            data = response.json()
-            assistant_response = data.get("respuesta", "No se obtuvo respuesta.")
-        else:
-            assistant_response = "Error al procesar tu mensaje."
-        st.session_state.messages.append({"role": "assistant", "content": assistant_response})
+URL = "http://localhost:8000"
 
 # Página Home (sin autenticación)
 if not st.session_state.logged_in:
@@ -220,7 +207,7 @@ else:
     
     elif service_option == "Diario":
         st.title("Diario Emocional")
-        st.write(f"Diario de: **{st.session_state.username}**")
+        st.write(f"Usuario: **{st.session_state.username}**")
         params = {"username": st.session_state.username, "password": st.session_state.password}
         response = requests.get(f"{URL}/diario", params=params)
         diary_entries = []
@@ -324,16 +311,4 @@ else:
     
     elif service_option == "Objetivo":
         st.title("Objetivos Personales")
-        st.write(f"Usuario: **{st.session_state.username}**")
-        
-        # Realizar la petición GET al endpoint /Objetivo
-        params = {"username": st.session_state.username, "password": st.session_state.password}
-        response = requests.get(f"{URL}/Objetivo", params=params)
-        
-        if response.ok:
-            data = response.json()
-            objetivo = data.get("objetivo", "No se obtuvo un objetivo.")
-            st.markdown("### Objetivos de Mejora")
-            st.write(objetivo)
-        else:
-            st.error("Error al obtener los objetivos. Verifica tus entradas en el diario o tus credenciales.")
+        st.info("Sección en construcción. ¡Próximamente!")

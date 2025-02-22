@@ -1,4 +1,3 @@
-# archivo: main.py
 import os
 import nltk
 import text2emotion as te
@@ -37,12 +36,13 @@ class UserAuth(BaseModel):
     username: str
     password: str
 
-# Agregamos el campo opcional "fecha" (en formato "YYYY-MM-DD") para poder editar entradas de días anteriores.
+# Se agrega el campo opcional "fecha" (formato "YYYY-MM-DD") y "editar" para distinguir la acción.
 class DiaryEntry(BaseModel):
     username: str
     password: str
     entry: str
-    fecha: str = None  # Opcional; si no se proporciona, se usará la fecha actual.
+    fecha: str = None  # Opcional; si no se proporciona, se usa la fecha actual.
+    editar: bool = False  # Por defecto, no es edición.
 
 # ----------------------------------------------
 # Endpoint de Chat (usando la API oficial de Mistralai)
@@ -57,24 +57,6 @@ def call_mistral_rag(conversation_messages: list[dict]) -> str:
         messages=conversation_messages
     )
     return chat_response.choices[0].message.content
-
-def list_of_dicts_to_entries_text(entries: list) -> str:
-    """Convertir la lista de diccionarios de entradas del diario a un texto estructurado"""
-    text_entries = ""
-    for entry in entries:
-        # Asumimos que cada entry es un diccionario con "date", "entry", y "emotions"
-        date = entry["date"]
-        text = entry["entry"]
-        emotions = entry["emotions"]
-        
-        text_entries += f"Fecha: {date}\n"
-        text_entries += f"Entrada: {text}\n"
-        text_entries += f"Emociones:\n"
-        for emotion, value in emotions.items():
-            text_entries += f"- {emotion}: {value}\n"
-        text_entries += "\n"  # Añadir una línea vacía entre las entradas
-    
-    return text_entries
 
 @app.post("/chat")
 async def chat(conversation: Conversation):
@@ -151,7 +133,6 @@ def perfilar():
         perfil_personalidad = "Tendencia al miedo"
     return {"perfil_emocional": perfil, "sugerencia": perfil_personalidad}
 
-
 # ----------------------------------------------
 # Endpoint de Registro
 # ----------------------------------------------
@@ -174,7 +155,7 @@ async def login(user: UserAuth):
     return {"mensaje": "Login exitoso"}
 
 # ----------------------------------------------
-# Endpoint para agregar o actualizar la entrada del Diario (única entrada por día, según la fecha seleccionada)
+# Endpoint para agregar o actualizar la entrada del Diario
 # ----------------------------------------------
 @app.post("/diario")
 async def agregar_diario(entry: DiaryEntry):
@@ -186,21 +167,25 @@ async def agregar_diario(entry: DiaryEntry):
     target_date = entry.fecha if entry.fecha is not None else datetime.now().strftime("%Y-%m-%d")
     entry_for_date = db.get_diary_entry(entry.username, target_date)
 
-    if entry_for_date is not None:
-        # Sobrescribir la entrada con el nuevo texto (y recalcular las emociones)
-        new_text = f"{entry_for_date['entry']} \n\n{entry.entry}"
+    if entry.editar:
+        if entry_for_date is None:
+            raise HTTPException(status_code=400, detail="No existe una entrada previa para editar en esta fecha")
+        # Modo edición: sobrescribir la entrada existente
+        new_text = entry.entry
         new_emotions = te.get_emotion(new_text)
         entry_for_date["entry"] = new_text
         entry_for_date["emotions"] = new_emotions
         entry_for_date["date"] = target_date
         updated_entry = entry_for_date
     else:
-        fecha = target_date
+        if entry_for_date is not None:
+            raise HTTPException(status_code=400, detail="Ya existe una entrada para esta fecha. Usa el modo edición.")
         new_emotions = te.get_emotion(entry.entry)
-        updated_entry = {"entry": entry.entry, "emotions": new_emotions, "date": fecha}
+        updated_entry = {"entry": entry.entry, "emotions": new_emotions, "date": target_date}
     
     db.insert_diary_entry(entry.username, updated_entry)
     return {"mensaje": "Entrada actualizada en el diario", "registro": updated_entry}
+
 # ----------------------------------------------
 # Endpoint para obtener la entrada del Diario para un usuario (por fecha)
 # ----------------------------------------------
@@ -214,10 +199,8 @@ async def obtener_diario(username: str = Query(...), password: str = Query(...))
         raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
     return {"diario": diary}
 
-
 # ----------------------------------------------
 # Endpoint para Profiling basado en el historial del Diario
-# Modelos: Big Five y Eneagrama (usando mayor peso para entradas recientes)
 # ----------------------------------------------
 import plotly.graph_objects as go
 
@@ -301,6 +284,23 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
  #   elif average_emotions["Surprise"] > 0.4 and average_emotions["Angry"] < 0.3:
   #      eneagrama = "Tipo 3: El Triunfador"
    # else:
+    def list_of_dicts_to_entries_text(entries: list) -> str:
+        """Convertir la lista de diccionarios de entradas del diario a un texto estructurado"""
+        text_entries = ""
+        for entry in entries:
+            # Asumimos que cada entry es un diccionario con "date", "entry", y "emotions"
+            date = entry["date"]
+            text = entry["entry"]
+            emotions = entry["emotions"]
+            
+            text_entries += f"Fecha: {date}\n"
+            text_entries += f"Entrada: {text}\n"
+            text_entries += f"Emociones:\n"
+            for emotion, value in emotions.items():
+                text_entries += f"- {emotion}: {value}\n"
+            text_entries += "\n"  # Añadir una línea vacía entre las entradas
+        
+        return text_entries
 
     # Usar este formato legible con una lista de diccionarios
     entries_text = list_of_dicts_to_entries_text(diary_entries)
@@ -308,7 +308,7 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
     # Ahora pasar esta cadena al LLM
     eneagrama = call_mistral_rag([{
         "role": "system",
-        "content": f"Determina el tipo de eneagrama basado en las siguientes emociones y textos del diario:\n{entries_text}. Sé escueto y preciso y lo primero que debes de decir es el tipo de eneagrama"
+        "content": f"Determina el tipo de eneagrama basado en las siguientes emociones y textos del diario:\n{entries_text}"
     }])
 
     # --- Generación del gráfico Radar para Big Five ---
@@ -352,26 +352,6 @@ async def obtener_profiling(username: str = Query(...), password: str = Query(..
         "radar_chart": radar_fig.to_json(),
         "bar_chart": bar_fig.to_json()
     }
-@app.get("/Objetivo")
-async def objetivo(username: str = Query(...), password: str = Query(...)):
-    success = db.verify_user(username, password)
-    if not success:
-        raise HTTPException(status_code=400, detail="Credenciales inválidas")
 
-    prompt = "Genera unicamente una lista en de objetivos de mejora basados en la siguiente información. SOLO haz objetivos si el usuario muestra CLARAMENTE que quiere mejorar en algo o cambiar "
-    diary_entries = db.get_diary_entries(username)
-    if not diary_entries:
-        raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
-
-    entries_text = list_of_dicts_to_entries_text(diary_entries)
-    objetivo = call_mistral_rag([{
-        "role": "system",
-        "content": f"{prompt}\n{entries_text}"
-    }])
-
-    return {"objetivo": objetivo}
-# ----------------------------------------------
-# Punto de entrada de la aplicación
-# ----------------------------------------------
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
