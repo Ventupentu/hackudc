@@ -73,6 +73,15 @@ def list_of_dicts_to_entries_text(entries: list) -> str:
         text_entries += "\n"  # Línea vacía entre entradas
     return text_entries
 
+@app.get("/start_chat")
+async def start_chat(username : str = Query(...)):
+    #Vamos a intentar recuperar la conversación de la base de datos
+    #Tanto para que la vea el usuario como para que la IA pueda tener contexto
+    #Un máximo de diez mensajes, para no saturar la API de Mistral
+    # 10 del usuario, 10 de la IA
+    conversation_list = db.get_chat_history(username, 10)
+    return {"conversation": conversation_list}
+
 @app.post("/chat")
 async def chat(conversation: Conversation):
     if not conversation.messages:
@@ -80,7 +89,6 @@ async def chat(conversation: Conversation):
     username = conversation.username
     # Convertir mensajes a diccionarios
     conversation_list = [msg.dict() for msg in conversation.messages]
-    print("Conversación:", conversation_list)
 
     # Analizar emociones del último mensaje del usuario
     last_message = conversation.messages[-1]
