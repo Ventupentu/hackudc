@@ -292,16 +292,15 @@ else:
     
     elif service_option == "Profiling":
         st.title("Perfil de Personalidad")
-        st.write(f"Usuario: **{st.session_state.username}**")
+        #st.write(f"Usuario: **{st.session_state.username}**")
         params = {"username": st.session_state.username, "password": st.session_state.password}
         response = requests.get(f"{URL}/perfilado", params=params)
-        print(response)
+
         if response.ok:
             data = response.json()
-            print(data)
+
             perfil = data.get("perfil", {})
-            eneagrama = data.get("eneagrama", "No se obtuvo un eneagrama.")
-            st.markdown("### Perfil Emocional y Big Five")
+            eneagrama = data['perfil'].get("eneagrama", "No se obtuvo un eneagrama.")
             #st.json(perfil)
             # Mostrar perfil emocional en gráfico de barras
             perfil_emocional = perfil.get("perfil_emocional", {})
@@ -319,46 +318,55 @@ else:
                     title="Estadísticas Emocionales",
                     labels={"Valor": "Valor Promedio", "Emoción": "Emoción"}
                 )
+
+                # Mostrar gráfico radar de los Big Five
+                big_five = perfil.get("big_five", None)
+                if not big_five:
+                    big_five = {
+                        "Openness": 0,
+                        "Conscientiousness": 0,
+                        "Extraversion": 0,
+                        "Agreeableness": 0,
+                        "Neuroticism": 0
+                    }
+                import plotly.graph_objects as go
+                categories = list(big_five.keys())
+                values = list(big_five.values())
+                # Para cerrar el gráfico radar, se repite el primer elemento
+                values += values[:1]
+                categories += categories[:1]
+                fig_radar = go.Figure(
+                    data=go.Scatterpolar(
+                        r=values,
+                        theta=categories,
+                        fill="toself",
+                        name="Big Five"
+                    )
+                )
+                fig_radar.update_layout(
+                    polar=dict(
+                        radialaxis=dict(
+                            visible=True,
+                            range=[0, 100]
+                        )
+                    ),
+                    showlegend=False,
+                    title="Perfil Big Five"
+                )
                 st.plotly_chart(fig_bar)
-                st.markdown(f"**Eneagrama:** {eneagrama}")
-                st.write(eneagrama)
+                st.markdown(f"{perfil['tendencia']}")
+
+                st.plotly_chart(fig_radar)
+                                
+                st.markdown("### Eneagrama")
+                st.markdown(f"{eneagrama['eneagrama_type']}")
+                st.markdown(f"{eneagrama['description']}")
+                st.markdown(f"{eneagrama['recommendation']}")
+
+                
+                #st.write(eneagrama)
             else:
                 st.info("No se encontraron datos en el perfil emocional.")
             
-            # Mostrar gráfico radar de los Big Five
-            big_five = perfil.get("big_five", None)
-            if not big_five:
-                big_five = {
-                    "Openness": 70,
-                    "Conscientiousness": 65,
-                    "Extraversion": 60,
-                    "Agreeableness": 75,
-                    "Neuroticism": 40
-                }
-            import plotly.graph_objects as go
-            categories = list(big_five.keys())
-            values = list(big_five.values())
-            # Para cerrar el gráfico radar, se repite el primer elemento
-            values += values[:1]
-            categories += categories[:1]
-            fig_radar = go.Figure(
-                data=go.Scatterpolar(
-                    r=values,
-                    theta=categories,
-                    fill="toself",
-                    name="Big Five"
-                )
-            )
-            fig_radar.update_layout(
-                polar=dict(
-                    radialaxis=dict(
-                        visible=True,
-                        range=[0, 100]
-                    )
-                ),
-                showlegend=False,
-                title="Perfil Big Five"
-            )
-            st.plotly_chart(fig_radar)
         else:
             st.error("Error al obtener el perfil. Verifica tus entradas en el diario o tus credenciales.")

@@ -90,7 +90,6 @@ async def chat(conversation: Conversation):
 
     # Crear un perfil emocional simple a partir del diario
     perfil = perfilar(username)
-    print(f"Perfil emocional: {perfil}")
 
     # Crear un mensaje adicional para orientar a la IA
     mensaje_emocional = {
@@ -121,19 +120,19 @@ def perfilar(username: str) -> dict:
         count += 1
 
     if count == 0:
-        return {"perfil_emocional": {}, "sugerencia": "No hay datos suficientes"}
+        return {"perfil_emocional": {}, "tendencia": "No hay datos suficientes"}
 
     # Normalizar valores
     for emo in perfil:
         perfil[emo] /= count
 
     emocion_dominante = max(perfil, key=perfil.get)
-    sugerencia = {
-        "Happy": "Tendencia a la felicidad",
-        "Sad": "Tendencia a la melancolía",
-        "Angry": "Tendencia a la irritabilidad",
-        "Surprise": "Tendencia a la sorpresa",
-        "Fear": "Tendencia al miedo"
+    tendencia = {
+        "Happy": "Tienes tendencia a la felicidad",
+        "Sad": "Tienes tendencia a la melancolía",
+        "Angry": "Tienes tendencia a la irritabilidad",
+        "Surprise": "Tienes tendencia a la sorpresa",
+        "Fear": "Tienes tendencia al miedo"
     }.get(emocion_dominante, "Personalidad equilibrada")
 
     # Usar este formato legible con una lista de diccionarios
@@ -142,11 +141,44 @@ def perfilar(username: str) -> dict:
     # Ahora pasar esta cadena al LLM
     eneagrama = call_mistral_rag([{
         "role": "system",
-        "content": f"Determina el tipo de eneagrama basado en las siguientes emociones y textos del diario:\n{entries_text}. Sé escueto y preciso y lo primero que debes de decir es el tipo de eneagrama"
-    }])
-    print("Eneagrama:", eneagrama)
+        "content": f"""
+    Analiza las siguientes emociones y textos del diario y determina el tipo de eneagrama del usuario. Debes responder de forma elaborada, precisa y siempre siguiendo exactamente el siguiente formato JSON, sin ningún comentario adicional:
+    No seas tan formal, sé más cercano y amigable con el usuario. Puedes hablar de tú a tú.
+    Tipos de eneagrama:
+    - 1: Perfeccionista
+    - 2: Ayudador
+    - 3: Triunfador
+    - 4: Individualista
+    - 5: Investigador
+    - 6: Leal
+    - 7: Entusiasta
+    - 8: Protector
+    - 9: Pacificador
+    {{
+    "eneagrama_type": "Eneatipo <numero> (<nombre>)",
+    "description": "<Descripción breve del tipo>",
+    "recommendation": "<Recomendación concreta basada en el análisis>"
+    }}
 
-    return {"perfil_emocional": perfil, "sugerencia": sugerencia, "eneagrama": eneagrama}
+    Utiliza los siguientes datos:
+    {entries_text}
+    """
+    }])
+
+    clean_response = re.sub(r"^```(?:json)?\s*", "", eneagrama).strip()
+    clean_response = re.sub(r"\s*```$", "", clean_response)
+
+    try:
+        eneagrama_dict = json.loads(clean_response)
+    except Exception as e:
+        print("Error parsing JSON:", e)
+        eneagrama_dict = {}
+
+    print("Eneagrama:", eneagrama_dict)
+
+
+
+    return {"perfil_emocional": perfil, "tendencia": tendencia, "eneagrama": eneagrama_dict}
 
 # ----------------------------------------------
 # Endpoint de Registro
@@ -258,8 +290,7 @@ def calculate_big_five(username: str) -> dict:
     clean_response = re.sub(r"^```(?:json)?\s*", "", big_five_response)
     clean_response = re.sub(r"\s*```$", "", clean_response)
 
-    print("Big Five response:", clean_response)
-    
+   
     try:
         big_five = json.loads(clean_response)
     except Exception as e:
@@ -270,7 +301,7 @@ def calculate_big_five(username: str) -> dict:
             "Agreeableness": 0,
             "Neuroticism": 0
         }
-        print("me hago caca")
+
     
     return big_five
 
@@ -292,8 +323,9 @@ async def perfilado(username: str = Query(...), password: str = Query(...)):
     # Combinar ambos perfiles en la respuesta
     perfil_completo = {
         "perfil_emocional": perfil_emocional_data.get("perfil_emocional", {}),
-        "sugerencia": perfil_emocional_data.get("sugerencia", ""),
-        "big_five": big_five
+        "tendencia": perfil_emocional_data.get("tendencia", ""),
+        "big_five": big_five,
+        "eneagrama": perfil_emocional_data.get("eneagrama", "")
     }
     
     return {"perfil": perfil_completo}
