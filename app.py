@@ -295,14 +295,16 @@ else:
         st.write(f"Usuario: **{st.session_state.username}**")
         params = {"username": st.session_state.username, "password": st.session_state.password}
         response = requests.get(f"{URL}/perfilado", params=params)
+        print(response)
         if response.ok:
             data = response.json()
+            print(data)
             perfil = data.get("perfil", {})
+            eneagrama = data.get("eneagrama", "No se obtuvo un eneagrama.")
             st.markdown("### Perfil Emocional y Big Five")
             #st.json(perfil)
             # Mostrar perfil emocional en gráfico de barras
             perfil_emocional = perfil.get("perfil_emocional", {})
-            sugerencia = perfil.get("sugerencia", "Sin sugerencia")
             if perfil_emocional:
                 import pandas as pd
                 df = pd.DataFrame({
@@ -318,7 +320,8 @@ else:
                     labels={"Valor": "Valor Promedio", "Emoción": "Emoción"}
                 )
                 st.plotly_chart(fig_bar)
-                st.markdown(f"**Sugerencia:** {sugerencia}")
+                st.markdown(f"**Eneagrama:** {eneagrama}")
+                st.write(eneagrama)
             else:
                 st.info("No se encontraron datos en el perfil emocional.")
             

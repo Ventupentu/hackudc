@@ -136,7 +136,17 @@ def perfilar(username: str) -> dict:
         "Fear": "Tendencia al miedo"
     }.get(emocion_dominante, "Personalidad equilibrada")
 
-    return {"perfil_emocional": perfil, "sugerencia": sugerencia}
+    # Usar este formato legible con una lista de diccionarios
+    entries_text = list_of_dicts_to_entries_text(diary_entries)
+
+    # Ahora pasar esta cadena al LLM
+    eneagrama = call_mistral_rag([{
+        "role": "system",
+        "content": f"Determina el tipo de eneagrama basado en las siguientes emociones y textos del diario:\n{entries_text}. Sé escueto y preciso y lo primero que debes de decir es el tipo de eneagrama"
+    }])
+    print("Eneagrama:", eneagrama)
+
+    return {"perfil_emocional": perfil, "sugerencia": sugerencia, "eneagrama": eneagrama}
 
 # ----------------------------------------------
 # Endpoint de Registro
