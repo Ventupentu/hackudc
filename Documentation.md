@@ -20,7 +20,7 @@ El frontend está construido con Streamlit, una biblioteca de Python que permite
 - **Objetivos Personales:** Sugerencias de objetivos basados en las entradas del diario.
 - **Personas similares:** Muestra personas que puedan tener un eneagrama similar al tuyo
 
-Además contamos con que Streamlit tiene "Streamlit Commity Coud", donde puedes enlazar un repositorio de github y ejecuar el frontend en la nube de forma sencilla
+Además contamos con que Streamlit tiene "Streamlit Commity Coud", donde puedes enlazar un repositorio de github y ejecuar el frontend en la nube de forma sencilla.
 
 ### Backend (FastAPI)
 
@@ -32,8 +32,13 @@ El backend está desarrollado con FastAPI, un framework moderno y rápido para c
 - **Profiling:** Análisis de emociones y generación de perfiles de personalidad.
 - **Objetivos:** Generación de objetivos basados en las entradas del diario.
 
-El backend tambien lo ejecutamos en la nube gracias al servicio de "Render", que es gratis, aunque no es muy eficiente ni estable.
+El backend tambien lo ejecutamos en la nube gracias al servicio de "Render", que es gratis, aunque no es muy eficiente ni estable, a este le tuvimos que pasar las dependencias junto con las variables de entorno.
 ## Uso
+
+
+## La base de datos
+
+El objetivo de la clase es encargarse de hacer las sentencias SQL a la base de datos, se encargará tanto de incorporar datos a la base, como de extraerlos y llevarlos al formato indicado para la aplicación.
 
 ## Instalación y Ejecución en Local
 
@@ -61,7 +66,7 @@ pip install -r requirements.txt
 
 Configura la base de datos:
 
-1. Asegúrate de tener MySQL instalado y en ejecución, en esta implementación hemos puesto la base de datos en alojada en alwaysdata.
+1. Asegúrate de tener MySQL en algún servidor (en nuestro caso alwaysdata) o instalada localmente 
 2. Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
 
 ```env
@@ -76,10 +81,16 @@ DB_PASSWORD="Hackaton2025"
 ## Uso de la Aplicación
 
 ### Encender en local:
-Para lanzar el main.py: uvicorn main:app --reload
+Para lanzar el main.py: u
+```bash
+vicorn main:app --reload
+```
 
-Para lanzar el app.py: streamlit run app.py
+Para lanzar el app.py:
 
+```bash
+streamlit run app.py
+```
 Entrar al localhost del app.py para probar el chatbot
 
 ### Usar online
@@ -124,7 +135,7 @@ Este archivo contiene el código del backend desarrollado con FastAPI. Incluye l
 
 ### `access_bd.py`
 
-Este archivo contiene la clase `AccessBD` que maneja la interacción con la base de datos MySQL. Incluye métodos para registrar usuarios, insertar y recuperar entradas del diario, y manejar el historial del chat.
+Este archivo contiene la clase `AccessBD` que maneja la interacción con la base de datos MySQL, que en el caso de esta implementación, la alojamos en alwaysdata. Incluye métodos para registrar usuarios, insertar y recuperar entradas del diario, y manejar el historial del chat.
 
 ## Detalles Técnicos
 
