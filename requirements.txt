@@ -1,4 +1,3 @@
-nltk
 fastapi
 text2emotion
 dotenv
