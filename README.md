@@ -1,10 +1,8 @@
 # EmotionAI - HackUDC Project
 
-![EmotionAI Logo](#) *
-
 ## Overview
 
-EmotionAI is an innovative project developed during HackUDC that leverages Mistral AI to detect emotions from user input and provide empathetic responses. It combines advanced Natural Language Processing (NLP) techniques with Retrieval-Augmented Generation (RAG) to deliver personalized interactions. Additionally, it includes a personal diary feature to help users track their emotional state over time.
+Emotionai is a web application developed for a hackathon that uses a language model (LLM) to analyze and respond to users' emotions. The application allows users to interact with an emotional chatbot, maintain an emotional diary, receive a personality profile based on their emotions, and set personal goals. Below is a more detailed documentation covering additional aspects of the project.
 
 ## Key Features
 
@@ -18,7 +16,7 @@ EmotionAI is an innovative project developed during HackUDC that leverages Mistr
 
 - **Backend:** Python, FastAPI, MySQL  
 - **Frontend:** Streamlit  
-- **AI Models:** Mistral AI, NLTK, Text2Emotion  
+- **AI Models:** Mistral AI, Text2Emotion  
 - **Visualization:** Plotly  
 - **Authentication:** Custom user authentication with password hashing  
 
@@ -67,7 +65,7 @@ EmotionAI is an innovative project developed during HackUDC that leverages Mistr
 
 6. **Launch the Streamlit frontend:**
    ```bash
-   streamlit run app.py  
+   streamlit run emotionai.py 
    ```
 
 ## Usage
