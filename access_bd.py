@@ -355,8 +355,6 @@ if __name__ == '__main__':
     #estos indices nos permitirán hacer búsquedas más rápidas en la base de datos
     """
 
-    #pequeña prueba de la funcionalidad de la base de datos
-    print(access_bd.get_chat_history("Sergio"))
     access_bd.close()
 
     

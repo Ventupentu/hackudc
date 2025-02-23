@@ -1,6 +1,10 @@
 import streamlit as st
 import requests
 import datetime
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 st.markdown(
     """
@@ -88,10 +92,6 @@ st.markdown(
     """, unsafe_allow_html=True
 )
 
-
-
-
-
 # Inicializar variables de sesión
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -106,7 +106,7 @@ if "diary_text" not in st.session_state:
 if "edit_mode" not in st.session_state:
     st.session_state.edit_mode = False
 
-URL = "https://hackudc.onrender.com"
+URL = os.getenv("URL")
 
 def send_message():
     user_input = st.session_state.get("user_input", "")

@@ -1,5 +1,4 @@
 import os
-import nltk
 import text2emotion as te
 import re
 import json
@@ -17,10 +16,6 @@ load_dotenv()  # Carga las variables de entorno
 emotionai = FastAPI()
 
 db = AccessBD()
-
-# Descarga recursos de NLTK (si aún no se han descargado)
-nltk.download('punkt_tab')
-nltk.download('punkt')
 
 # ----------------------------------------------
 # Modelos para Chat, Autenticación y Diario
@@ -211,7 +206,9 @@ async def register(user: UserAuth):
 # ----------------------------------------------
 @emotionai.post("/login")
 async def login(user: UserAuth):
+    print(user)
     success = db.verify_user(user.username, user.password)
+    print(success)
     if not success:
         raise HTTPException(status_code=400, detail="Credenciales inválidas")
     return {"mensaje": "Login exitoso"}
@@ -325,9 +322,6 @@ def calculate_big_five(username: str) -> dict:
 # ----------------------------------------------
 @emotionai.get("/perfilado")
 async def perfilado(username: str = Query(...), password: str = Query(...)):
-    success = db.verify_user(username, password)
-    if not success:
-        raise HTTPException(status_code=400, detail="Credenciales inválidas")
     
     # Obtener perfil emocional
     perfil_emocional_data = perfilar(username)
@@ -348,10 +342,6 @@ async def perfilado(username: str = Query(...), password: str = Query(...)):
 
 @emotionai.get("/Objetivo")
 async def objetivo(username: str = Query(...), password: str = Query(...)):
-    # Verificar credenciales del usuario
-    success = db.verify_user(username, password)
-    if not success:
-        raise HTTPException(status_code=400, detail="Credenciales inválidas")
     
     # Obtener entradas del diario del usuario
     diary_entries = db.get_diary_entries(username)
