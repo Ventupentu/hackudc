@@ -36,9 +36,11 @@ Emotionai is a web application developed for a hackathon that uses a language mo
    cd hackudc  
    ```
 
-2. **Install dependencies:**
+2. **Create virtual environment, and install dependencies**
    ```bash
-   pip install -r requirements.txt  
+   python -m venv venv
+   source venv/bin/activate  # En Windows usa `venv\Scripts\activate`
+   pip install -r requirements.txt
    ```
 
 3. **Set up the database:**
@@ -60,7 +62,7 @@ Emotionai is a web application developed for a hackathon that uses a language mo
 
 5. **Run the backend server:**
    ```bash
-    vicorn main:emotionai --reload
+    uvicorn main:emotionai --reload
    ```
 
 6. **Launch the Streamlit frontend:**
