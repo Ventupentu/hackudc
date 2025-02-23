@@ -70,11 +70,11 @@ Configura la base de datos:
 2. Crea un archivo `.env` en la raíz del proyecto con las siguientes variables, para la base de datos, para la api key del LLM y para la url local y en la web:
 
 ```env
-MISTRAL_API_KEY="XJdqntbMS52MYcWrfifGJzxMWZgWlRgg"
-DB_HOST="mysql-sergiogonzalezrodriguez.alwaysdata.net"
-DB_NAME="sergiogonzalezrodriguez_users"
-DB_USER="400882_1"
-DB_PASSWORD="Hackaton2025"
+MISTRAL_API_KEY="your_api_key"
+DB_HOST="your_host"
+DB_NAME="your_name"
+DB_USER="your_user"
+DB_PASSWORD="your_password"
 # URL="url_1"
 URL="url_2"
 ```
@@ -126,9 +126,12 @@ Entrar al siguiente enlace: https://emotionai777.streamlit.app/
 
 ## Estructura del Código
 
-### `app.py`
+### `emotionai.py`
 
-Este archivo contiene el código del frontend desarrollado con Streamlit. Incluye la interfaz gráfica y la lógica para interactuar con el backend, junto con las pestañas que sean necesarias.
+Este archivo contiene el código del frontend desarrollado con Streamlit. Incluye la interfaz gráfica y la lógica para interactuar con el backend, junto con las pestañas que sean necesarias. Viene con dos urls, una para ejecutarla en local y otra para ejecutarla desplegada en la web
+# URL="http://localhost:8000"
+URL=""
+
 
 ### `main.py`
 
