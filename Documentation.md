@@ -84,7 +84,7 @@ URL="url_2"
 ### Encender en local:
 Para lanzar el main.py: u
 ```bash
-vicorn main:emotionai --reload
+uvicorn main:emotionai --reload
 ```
 
 Para lanzar el emotionai.py:
