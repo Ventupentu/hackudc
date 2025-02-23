@@ -1,6 +1,6 @@
 # EmotionAI - HackUDC Project
 
-![EmotionAI Logo](#) *(Considera añadir un logo o imagen representativa)*
+![EmotionAI Logo](#) *
 
 ## Overview
 
@@ -44,19 +44,25 @@ EmotionAI is an innovative project developed during HackUDC that leverages Mistr
    ```
 
 3. **Set up the database:**
-   - Create a MySQL database and update the connection details in `access_bd.py`.
+   - Create a MySQL database (we did it in alwaysdata) and update the connection details in `access_bd.py`.
    - Run the necessary migrations to set up the tables, hosted in alwaysdata.
 
 4. **Configure the environment:**
    - Create a `.env` file in the root directory and add your Mistral AI API key:
-     ```plaintext
-     MISTRAL_API_KEY=your_api_key_here  
-     ```
-   - Alongside the necessary variables for the DB
+   ```env
+   MISTRAL_API_KEY="your_api_key"
+   DB_HOST="your_host"
+   DB_NAME="your_name"
+   DB_USER="your_user"
+   DB_PASSWORD="your_password"
+   # URL="url_1"
+   URL="url_2"
+   ```
+   - Alongside the necessary variables for the DB and urls 
 
 5. **Run the backend server:**
    ```bash
-   python main.py  
+    vicorn main:app --reload
    ```
 
 6. **Launch the Streamlit frontend:**
@@ -81,6 +87,11 @@ EmotionAI is an innovative project developed during HackUDC that leverages Mistr
 - Get insights into your personality traits using the Big Five model and Enneagram.
 - Explore interactive visualizations of your emotional patterns.
 
+### Objectives
+
+- Get recommendations of how you should behave
+
+  
 ## API Endpoints
 
 ### Backend (FastAPI)
