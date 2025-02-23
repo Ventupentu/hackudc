@@ -60,7 +60,7 @@ Emotionai is a web application developed for a hackathon that uses a language mo
 
 5. **Run the backend server:**
    ```bash
-    vicorn main:app --reload
+    vicorn main:emotionai --reload
    ```
 
 6. **Launch the Streamlit frontend:**
