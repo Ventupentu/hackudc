@@ -90,7 +90,7 @@ vicorn main:app --reload
 Para lanzar el emotionai.py:
 
 ```bash
-streamlit run app.py
+streamlit run emotionai.py
 ```
 Entrar al localhost del emotionai.py para probar el chatbot
 
