@@ -52,8 +52,8 @@ El objetivo de la clase es encargarse de hacer las sentencias SQL a la base de d
 Clona el repositorio del proyecto:
 
 ```bash
-git clone https://github.com/tu-usuario/llm-emociones.git
-cd llm-emociones
+git clone https://github.com/santipvz/hackudc.git
+cd hackudc
 ```
 
 Crea un entorno virtual e instala las dependencias:
@@ -87,16 +87,16 @@ Para lanzar el main.py: u
 vicorn main:app --reload
 ```
 
-Para lanzar el app.py:
+Para lanzar el emotionai.py:
 
 ```bash
 streamlit run app.py
 ```
-Entrar al localhost del app.py para probar el chatbot
+Entrar al localhost del emotionai.py para probar el chatbot
 
 ### Usar online
 
-Entrar al siguiente enlace: https://emotionai777.streamlit.app/
+Entrar al siguiente enlace: https://emotionai-chat.streamlit.app/
 
 ### Registro e Inicio de Sesión
 
@@ -130,7 +130,7 @@ Entrar al siguiente enlace: https://emotionai777.streamlit.app/
 
 Este archivo contiene el código del frontend desarrollado con Streamlit. Incluye la interfaz gráfica y la lógica para interactuar con el backend, junto con las pestañas que sean necesarias. Viene con dos urls, una para ejecutarla en local y otra para ejecutarla desplegada en la web
 # URL="http://localhost:8000"
-URL=""
+URL="https://emotionai-chat.streamlit.app/"
 
 
 ### `main.py`
