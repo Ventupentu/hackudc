@@ -103,8 +103,8 @@ if "diary_text" not in st.session_state:
 if "edit_mode" not in st.session_state:
     st.session_state.edit_mode = False
 
-#URL="http://localhost:8000"
-URL = "https://hackudc.onrender.com"
+URL="http://localhost:8000"
+#URL = "https://hackudc.onrender.com"
 
 def send_message():
     user_input = st.session_state.get("user_input", "")
@@ -163,7 +163,7 @@ else:
 
     st.sidebar.markdown("<h1 style='font-size: 30px;'>EmotionAI</h1>", unsafe_allow_html=True)
 
-    service_option = st.sidebar.radio("Selecciona un servicio:", ["Chatbot", "Diario", "Profiling", "Objetivo"])
+    service_option = st.sidebar.radio("Selecciona un servicio:", ["Chatbot", "Diario", "Perfilado", "Objetivo"])
     
     if st.sidebar.button("Cerrar sesión"):
         st.session_state.logged_in = False
@@ -300,7 +300,7 @@ else:
             st.error("Error al obtener los objetivos. Verifica tus entradas en el diario o tus credenciales.")
 
     
-    elif service_option == "Profiling":
+    elif service_option == "Perfilado":
         st.title("Perfil de Personalidad")
         params = {"username": st.session_state.username, "password": st.session_state.password}
         response = requests.get(f"{URL}/perfilado", params=params)
