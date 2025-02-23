@@ -67,7 +67,7 @@ pip install -r requirements.txt
 Configura la base de datos:
 
 1. Asegúrate de tener MySQL en algún servidor (en nuestro caso alwaysdata) o instalada localmente 
-2. Crea un archivo `.env` en la raíz del proyecto con las siguientes variables:
+2. Crea un archivo `.env` en la raíz del proyecto con las siguientes variables, para la base de datos, para la api key del LLM y para la url local y en la web:
 
 ```env
 MISTRAL_API_KEY="XJdqntbMS52MYcWrfifGJzxMWZgWlRgg"
@@ -75,7 +75,8 @@ DB_HOST="mysql-sergiogonzalezrodriguez.alwaysdata.net"
 DB_NAME="sergiogonzalezrodriguez_users"
 DB_USER="400882_1"
 DB_PASSWORD="Hackaton2025"
-
+# URL="url_1"
+URL="url_2"
 ```
 
 ## Uso de la Aplicación
