@@ -1,10 +1,7 @@
 import streamlit as st
 import requests
 import datetime
-from dotenv import load_dotenv
 import os
-
-load_dotenv()
 
 st.markdown(
     """
@@ -106,7 +103,8 @@ if "diary_text" not in st.session_state:
 if "edit_mode" not in st.session_state:
     st.session_state.edit_mode = False
 
-URL = os.getenv("URL")
+#URL="http://localhost:8000"
+URL = "https://hackudc.onrender.com"
 
 def send_message():
     user_input = st.session_state.get("user_input", "")
@@ -162,7 +160,9 @@ if not st.session_state.logged_in:
                     st.error("Error en el registro. Es posible que el usuario ya exista.")
 # Página de Servicios (usuario autenticado)
 else:
-    st.sidebar.title("Menú de Servicios")
+
+    st.sidebar.markdown("<h1 style='font-size: 30px;'>EmotionAI</h1>", unsafe_allow_html=True)
+
     service_option = st.sidebar.radio("Selecciona un servicio:", ["Chatbot", "Diario", "Profiling", "Objetivo"])
     
     if st.sidebar.button("Cerrar sesión"):
@@ -238,8 +238,7 @@ else:
         st.subheader("Selecciona la fecha")
         selected_date = st.date_input("Fecha", value=datetime.date.today())
         selected_date_str = selected_date.strftime("%Y-%m-%d")
-        
-        st.markdown(f"<div class='diary-header'>Entradas para el día {selected_date_str}:</div>", unsafe_allow_html=True)
+
         entries = diary_by_date.get(selected_date_str, [])
         if entries:
             for entry in entries:
