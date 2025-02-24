@@ -103,8 +103,8 @@ if "diary_text" not in st.session_state:
 if "edit_mode" not in st.session_state:
     st.session_state.edit_mode = False
 
-URL="http://localhost:8000"
-#URL = "https://hackudc.onrender.com"
+#URL="http://localhost:8000"
+URL = "https://hackudc.onrender.com"
 
 def send_message():
     user_input = st.session_state.get("user_input", "")
