@@ -103,8 +103,8 @@ if "diary_text" not in st.session_state:
 if "edit_mode" not in st.session_state:
     st.session_state.edit_mode = False
 
-#URL="http://localhost:8000"
-URL = "https://hackudc.onrender.com"
+URL="http://localhost:8000"
+#URL = "https://hackudc.onrender.com"
 
 def send_message():
     user_input = st.session_state.get("user_input", "")
@@ -112,7 +112,7 @@ def send_message():
         st.session_state.messages.append({"role": "user", "content": user_input})
         if len(st.session_state.messages) > 20:
             # Para mantener el limite de 20 mensajes en el chat (10 user, 10 assistant)
-            #Eliminamos el primero de la IA y el primero del usuario
+            # Eliminamos el primero de la IA y el primero del usuario
             st.session_state.messages.pop(0)
             st.session_state.messages.pop(0)
         payload = {"messages": st.session_state.messages, "username": st.session_state.username}

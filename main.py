@@ -2,6 +2,7 @@ import os
 import text2emotion as te
 import re
 import json
+import nltk
 from datetime import datetime
 
 from fastapi import FastAPI, HTTPException, Query
@@ -16,6 +17,9 @@ load_dotenv()  # Carga las variables de entorno
 emotionai = FastAPI()
 
 db = AccessBD()
+
+nltk.download('punkt_tab')
+nltk.download('punkt')
 
 # ----------------------------------------------
 # Modelos para Chat, Autenticación y Diario
