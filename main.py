@@ -95,7 +95,6 @@ async def chat(conversation: Conversation):
     if last_message.role == "user":
         emociones = te.get_emotion(last_message.content)
     emocion_dominante = max(emociones, key=emociones.get, default="neutral")
-
     # Crear un perfil emocional simple a partir del diario
     perfil = perfilar(username)
 
@@ -109,7 +108,10 @@ async def chat(conversation: Conversation):
     conversation_list.insert(0, mensaje_emocional)
 
     # Llamar a la API de Mistral con el historial actualizado
-    respuesta = call_mistral_rag(conversation_list)
+    try:
+        respuesta = call_mistral_rag(conversation_list)
+    except Exception:
+        print(f"Error invocando mistral: {e}")
 
     # Guardamos el último trozo de conversación en la base de datos
     piece_of_conversation = {
@@ -125,11 +127,11 @@ async def chat(conversation: Conversation):
 def perfilar(username: str) -> dict:
     """Obtiene el perfil emocional del usuario a partir de su historial de diario."""
     diary_entries = db.get_diary_entries(username)
-    if not diary_entries:
-        raise HTTPException(status_code=404, detail="No se encontraron entradas en el diario")
-        
     # Usamos claves con mayúscula inicial, ya que se almacenan así en la BD
     perfil = {"Happy": 0, "Sad": 0, "Angry": 0, "Surprise": 0, "Fear": 0}
+    if not diary_entries:
+        return {"perfil_emocional": perfil, "tendencia": {}, "eneagrama": {}}
+        
     count = 0
     for entry_data in diary_entries:
         emociones = entry_data.get("emotions", {})  # Asumir que el campo se llama "emotions"
