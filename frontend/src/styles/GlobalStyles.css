@@ -1,0 +1,50 @@
+/* src/styles/GlobalStyles.css */
+
+/* Importar la fuente desde Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600&display=swap');
+
+/* Reset y configuración básica */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Open Sans', sans-serif;
+  background-color: #f4f5f7; /* Gris claro */
+  color: #333;
+}
+
+/* Clases de utilidad */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Títulos */
+h1, h2, h3 {
+  font-weight: 600;
+  color: #000000; /* Azul grisáceo */
+}
+
+/* Enlaces */
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Botones */
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: 4px;
+  font-family: inherit;
+  transition: background-color 0.2s ease;
+}
+
+button:hover {
+  opacity: 0.9;
+}
