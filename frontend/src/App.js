@@ -1,25 +1,22 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Navbar from './components/NavBar';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Chat from './pages/Chat';
 import Diario from './pages/Diario';
 import Perfilado from './pages/Perfilado';
 import Objetivo from './pages/Objetivo';
-import './styles/App.css';
+import './styles/GlobalStyles.css'; // Estilos globales (fondo, fuentes, etc.)
 
 function App() {
-  // Inicializamos a partir de localStorage si existe
-  const [loggedIn, setLoggedIn] = useState(() => {
-    return localStorage.getItem('loggedIn') === 'true';
-  });
+  const [loggedIn, setLoggedIn] = useState(() => localStorage.getItem('loggedIn') === 'true');
   const [userCredentials, setUserCredentials] = useState(() => {
     const creds = localStorage.getItem('userCredentials');
     return creds ? JSON.parse(creds) : { username: '', password: '' };
   });
 
-  // Cada vez que cambie loggedIn o userCredentials, actualizamos localStorage
   useEffect(() => {
     localStorage.setItem('loggedIn', loggedIn);
   }, [loggedIn]);
@@ -35,39 +32,21 @@ function App() {
 
   return (
     <Router>
-      <header className="navbar">
-        <ul className="navbar-list">
-          {loggedIn ? (
-            <>
-              <li><a href="/chat">Chatbot</a></li>
-              <li><a href="/diario">Diario</a></li>
-              <li><a href="/perfilado">Perfilado</a></li>
-              <li><a href="/objetivo">Objetivo</a></li>
-              <li>
-                <button className="logout-button" onClick={handleLogout}>
-                  Cerrar sesión
-                </button>
-              </li>
-            </>
-          ) : (
-            <>
-              <li><a href="/login">Iniciar Sesión</a></li>
-              <li><a href="/register">Registrarse</a></li>
-            </>
-          )}
-        </ul>
-      </header>
+      {/* Renderiza la Navbar SOLO si el usuario está logueado */}
+      {loggedIn && <Navbar loggedIn={loggedIn} handleLogout={handleLogout} />}
 
       <Routes>
-        <Route 
-          path="/" 
-          element={loggedIn ? <Navigate to="/chat" /> : <Navigate to="/login" />} 
-        />
-        <Route 
-          path="/login" 
-          element={<Login setLoggedIn={setLoggedIn} setUserCredentials={setUserCredentials} />} 
+        {/* Redirigir / a /chat si logueado, o /login si no */}
+        <Route path="/" element={loggedIn ? <Navigate to="/chat" /> : <Navigate to="/login" />} />
+
+        {/* Login y Registro */}
+        <Route
+          path="/login"
+          element={<Login setLoggedIn={setLoggedIn} setUserCredentials={setUserCredentials} />}
         />
         <Route path="/register" element={<Register />} />
+
+        {/* Rutas protegidas: si no logueado, redirigir a /login */}
         {loggedIn ? (
           <>
             <Route path="/chat" element={<Chat userCredentials={userCredentials} />} />
@@ -83,10 +62,9 @@ function App() {
             <Route path="/objetivo" element={<Navigate to="/login" />} />
           </>
         )}
-        <Route 
-          path="*" 
-          element={loggedIn ? <Navigate to="/chat" /> : <Navigate to="/login" />} 
-        />
+
+        {/* Ruta comodín */}
+        <Route path="*" element={loggedIn ? <Navigate to="/chat" /> : <Navigate to="/login" />} />
       </Routes>
     </Router>
   );

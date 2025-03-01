@@ -1,21 +1,21 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "EmotionAI",
+  "name": "EmotionAI Software",
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "logo192.png",
-      "type": "image/png",
+      "src": "emotionai192.svg",
+      "type": "image/svg+xml",
       "sizes": "192x192"
     },
     {
-      "src": "logo512.png",
-      "type": "image/png",
+      "src": "emotionai512.svg",
+      "type": "image/svg+xml",
       "sizes": "512x512"
+    },
+    {
+      "src": "emotionai2048.svg",
+      "type": "image/svg+xml",
+      "sizes": "2048x2048"
     }
   ],
   "start_url": ".",

@@ -96,17 +96,6 @@ function Chat({ userCredentials }) {
 
   return (
     <div className="chat-page">
-      {/* Navbar horizontal fijo */}
-      <header className="navbar">
-        <ul className="navbar-list">
-          <li><a href="/chat">Chatbot</a></li>
-          <li><a href="/diario">Diario</a></li>
-          <li><a href="/perfilado">Perfilado</a></li>
-          <li><a href="/objetivo">Objetivo</a></li>
-          <li><button className="logout-button">Cerrar sesión</button></li>
-        </ul>
-      </header>
-
       {/* Área de mensajes scrollable (solo los mensajes se desplazan) */}
       <div className="chat-messages-container">
         <div className="chat-messages">

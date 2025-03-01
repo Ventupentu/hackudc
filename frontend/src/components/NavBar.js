@@ -1,10 +1,19 @@
+// src/components/Navbar.js
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../styles/NavBar.css';
 
-const NavBar = ({ loggedIn, onLogout }) => {
+function Navbar({ loggedIn, handleLogout }) {
+  const navigate = useNavigate();
+
+  const onLogout = () => {
+    console.log("Logout clicked");
+    handleLogout();
+    navigate("/login");
+  };
+
   return (
-    <nav className="navbar">
+    <header className="navbar">
       <ul className="navbar-list">
         {loggedIn ? (
           <>
@@ -12,7 +21,11 @@ const NavBar = ({ loggedIn, onLogout }) => {
             <li><Link to="/diario">Diario</Link></li>
             <li><Link to="/perfilado">Perfilado</Link></li>
             <li><Link to="/objetivo">Objetivo</Link></li>
-            <li><button onClick={onLogout}>Cerrar sesión</button></li>
+            <li>
+              <button className="logout-button" onClick={onLogout}>
+                Cerrar sesión
+              </button>
+            </li>
           </>
         ) : (
           <>
@@ -21,8 +34,8 @@ const NavBar = ({ loggedIn, onLogout }) => {
           </>
         )}
       </ul>
-    </nav>
+    </header>
   );
-};
+}
 
-export default NavBar;
+export default Navbar;
