@@ -1,70 +1,133 @@
-# Getting Started with Create React App
+# EmotionAI
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+Este proyecto consta de dos partes:
+- **Backend**: Desarrollado en Python con FastAPI, ejecutado con uvicorn.
+- **Frontend**: Aplicación React administrada con npm.
 
-## Available Scripts
+A continuación se muestran los pasos para instalar las dependencias y ejecutar el proyecto en local en un sistema Linux, usando dos terminales.
 
-In the project directory, you can run:
+---
 
-### `npm start`
+## Requisitos
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+- **Python 3.8+**
+- **Node.js y npm** (se recomienda instalar la versión LTS)
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+---
 
-### `npm test`
+## Instalación de Node.js y npm (en Linux)
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Usando Node Version Manager (nvm) (recomendado)
 
-### `npm run build`
+1. Instala nvm ejecutando en la terminal:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+   ```bash
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.5/install.sh | bash
+   ```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+    ```bash
+    source ~/.nvm/nvm.sh
+    ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+2. Instala la versión LTS de Node.js (esto instalará también npm):
 
-### `npm run eject`
+    ```bash
+    nvm install --lts
+    ```
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+3. Verifica la instalación:
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+    ```bash
+    node -v
+    npm -v
+    ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+### Alternativamente, usando el gestor de paquetes (apt)
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+1. Actualiza tus repositorios:
 
-## Learn More
+    ```bash
+    sudo apt update
+    ```
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+2. Instala Node.js y npm:
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+    ```bash
+    sudo apt install nodejs npm
+    ```
 
-### Code Splitting
+3. Verifica la instalación:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+    ```bash
+    node -v
+    npm -v
+    ```
 
-### Analyzing the Bundle Size
+## Configuración del Backend (FastAPI)
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
 
-### Making a Progressive Web App
+1. Navega a la carpeta del backend (por ejemplo, backend/):
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
+    ```bash
+    cd backend
+    ```
 
-### Advanced Configuration
+2. Crea un entorno virtual y actívalo:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
+    ```bash
+    python3 -m venv .venv
+    source .venv/bin/activate
+    ```
 
-### Deployment
+3. Instala las dependencias de Python (asegúrate de tener un archivo requirements.txt o instala las librerías necesarias manualmente):
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
+    ```bash
+    pip install -r requirements.txt
+    ```
 
-### `npm run build` fails to minify
+4. Ejecuta el servidor con uvicorn:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+    ```bash
+    uvicorn main:app --host 0.0.0.0 --port 8000
+    ```
+
+Esto iniciará el backend en http://localhost:8000.
+
+## Configuración del Frontend (React)
+
+1. Abre otra terminal y navega a la carpeta del frontend (por ejemplo, frontend/):
+
+    ```bash
+    cd frontend
+    ```
+
+2. Instala las dependencias del frontend:
+
+    ```bash
+    npm install
+    ```
+
+3. Inicia la aplicación React:
+
+    ```bash
+    npm start
+    ```
+
+Esto lanzará el servidor de desarrollo, normalmente en [http://localhost:3000](http://localhost:3000). La aplicación React se conectará al backend a través de los endpoints definidos.
+
+---
+
+## Resumen de Terminales
+
+**Terminal 1 (Backend):**
+- Activar entorno virtual: `source .venv/bin/activate`
+- Ejecutar: `uvicorn main:app --host 0.0.0.0 --port 8000`
+
+**Terminal 2 (Frontend):**
+- Instalar dependencias: `npm install`
+- Ejecutar: `npm start`
+
+
+---
+
+Con estos pasos tendrás el proyecto instalado y funcionando en local, usando dos terminales (una para el backend y otra para el frontend). Consulta la documentación de [FastAPI](https://fastapi.tiangolo.com/) y [Create React App](https://create-react-app.dev/) para más detalles.
