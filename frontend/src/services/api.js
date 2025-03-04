@@ -2,7 +2,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://emotion-ai-front.onrender.com'  // Cambia esta URL según dónde esté desplegado tu backend
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:8000'
 });
 
 export default api;
