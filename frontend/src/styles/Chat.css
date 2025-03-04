@@ -48,7 +48,7 @@
   .chat-messages-container {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 200px; /* Aumentamos el padding horizontal a 20px */
+    padding: 10px 300px; /* Aumentamos el padding horizontal a 20px */
     margin-bottom: 100px; /* Espacio para el input fijo */
     background-color: transparent;
     box-sizing: border-box;
@@ -63,7 +63,7 @@
   /* ===== Mensajes ===== */
   .chat-message {
     display: flex;
-    margin-bottom: 15px;
+    margin-bottom: 16px;
   }
   
   .chat-message.user {
@@ -105,8 +105,8 @@
 .chat-input-wrapper {
     position: fixed;
     bottom: 40px;   /* Margen desde la parte inferior */
-    left: 200px;     /* Margen lateral izquierdo */
-    right: 200px;    /* Margen lateral derecho */
+    left: 300px;     /* Margen lateral izquierdo */
+    right: 300px;    /* Margen lateral derecho */
     background-color: #40414f;
     padding: 10px 10px;
     box-sizing: border-box;
